@@ -319,6 +319,7 @@ input[readonly]{background:var(--surface2);opacity:.8}
     <div class="divider"></div>
     <div class="row">
       <div class="field"><label>Brownies em comodato</label><input type="number" id="c-estoque" min="0" placeholder="0"></div>
+      <div class="field"><label>Preço de venda do cliente (R$)</label><input type="number" id="c-preco-venda" min="0" step="0.01" placeholder="Ex: 8,00" title="Quanto o cliente cobra pelo brownie"></div>
       <div class="field"><label>Dia preferencial</label>
         <select id="c-dia">
           <option value="">Qualquer dia</option>
@@ -383,12 +384,13 @@ async function sbDelete(table, id){
 function dbToCliente(r){
   return {id:r.id,nome:r.nome,responsavel:r.responsavel||'',telefone:r.telefone||'',whatsapp:r.whatsapp||'',
     endereco:r.endereco||'',bairro:r.bairro||'',cidade:r.cidade||'',ref:r.ref||'',
-    estoque:r.estoque||0,obs:r.obs||'',status:r.status||'ativo',diaVisita:r.dia_visita||'',criadoEm:r.criado_em};
+    estoque:r.estoque||0,obs:r.obs||'',status:r.status||'ativo',diaVisita:r.dia_visita||'',
+    precoVenda:r.preco_venda||0,criadoEm:r.criado_em};
 }
 function clienteToDb(c){
   return {id:c.id,nome:c.nome,responsavel:c.responsavel,telefone:c.telefone,whatsapp:c.whatsapp,
     endereco:c.endereco,bairro:c.bairro,cidade:c.cidade,ref:c.ref,estoque:c.estoque,
-    obs:c.obs,status:c.status,dia_visita:c.diaVisita};
+    obs:c.obs,status:c.status,dia_visita:c.diaVisita,preco_venda:c.precoVenda||0};
 }
 function dbToVisita(r){
   return {id:r.id,clienteId:r.cliente_id,data:r.data,vendidos:r.vendidos||0,repostos:r.repostos||0,
@@ -606,6 +608,7 @@ function renderClientes(){
       </div>
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
         <span class="badge amber"><i class="ti ti-package" style="font-size:12px"></i>${+c.estoque||0} brownies</span>
+        ${c.precoVenda>0?`<span class="badge teal"><i class="ti ti-tag" style="font-size:12px"></i>vende a ${fmtMoney(c.precoVenda)}</span>`:''}
         ${ult?`<span class="tag">Última visita: ${fmtDate(ult.data)}</span>`:'<span class="tag">Sem visitas</span>'}
         ${totalV>0?`<span class="tag">${totalV} vendidos</span>`:''}
         ${totalR>0?`<span class="tag">${fmtMoney(totalR)} recebido</span>`:''}
@@ -636,7 +639,7 @@ function populateClientSelect(){
 
 // ─── MODAL CLIENTE ───────────────────────────────────────────────
 function openClientModal(c=null){
-  ['c-id','c-nome','c-responsavel','c-telefone','c-whatsapp','c-endereco','c-bairro','c-cidade','c-ref','c-estoque','c-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['c-id','c-nome','c-responsavel','c-telefone','c-whatsapp','c-endereco','c-bairro','c-cidade','c-ref','c-estoque','c-preco-venda','c-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('c-status').value='ativo';
   document.getElementById('c-dia').value='';
   document.getElementById('modal-title').textContent=c?'Editar cliente':'Novo cliente';
@@ -651,6 +654,7 @@ function openClientModal(c=null){
     document.getElementById('c-cidade').value=c.cidade||'';
     document.getElementById('c-ref').value=c.ref||'';
     document.getElementById('c-estoque').value=c.estoque||0;
+    document.getElementById('c-preco-venda').value=c.precoVenda||'';
     document.getElementById('c-obs').value=c.obs||'';
     document.getElementById('c-status').value=c.status||'ativo';
     document.getElementById('c-dia').value=c.diaVisita||'';
@@ -668,7 +672,9 @@ async function salvarCliente(){
     telefone:document.getElementById('c-telefone').value,whatsapp:document.getElementById('c-whatsapp').value,
     endereco:document.getElementById('c-endereco').value,bairro:document.getElementById('c-bairro').value,
     cidade:document.getElementById('c-cidade').value,ref:document.getElementById('c-ref').value,
-    estoque:+(document.getElementById('c-estoque').value)||0,obs:document.getElementById('c-obs').value,
+    estoque:+(document.getElementById('c-estoque').value)||0,
+    precoVenda:+(document.getElementById('c-preco-venda').value)||0,
+    obs:document.getElementById('c-obs').value,
     status:document.getElementById('c-status').value,diaVisita:document.getElementById('c-dia').value};
   try {
     if(existingId){
@@ -832,6 +838,7 @@ function abrirPerfil(id){
       ${c.ref?`<div class="perfil-info-item"><span class="lbl">Referência</span><span class="val">${c.ref}</span></div>`:''}
       ${c.diaVisita?`<div class="perfil-info-item"><span class="lbl">Dia preferencial</span><span class="val">${c.diaVisita}</span></div>`:''}
       <div class="perfil-info-item"><span class="lbl">Estoque atual</span><span class="val" style="color:var(--amber);font-weight:600">${+c.estoque||0} brownies</span></div>
+      ${c.precoVenda>0?`<div class="perfil-info-item"><span class="lbl">Preço de venda</span><span class="val" style="color:var(--teal);font-weight:600">${fmtMoney(c.precoVenda)} / unidade</span></div>`:''}
       <div class="perfil-info-item"><span class="lbl">Última visita</span><span class="val">${ult?fmtDate(ult.data):'Nunca'}</span></div>
       ${c.obs?`<div class="perfil-info-item" style="grid-column:1/-1"><span class="lbl">Observações</span><span class="val">${c.obs}</span></div>`:''}
     </div>`;
@@ -839,12 +846,16 @@ function abrirPerfil(id){
   const totalRec=cv.reduce((s,v)=>s+(+v.recebido||0),0);
   const saldo=Math.max(0,cv.reduce((s,v)=>s+(+v.valor||0),0)-totalRec);
   const totalRep=cv.reduce((s,v)=>s+(+v.repostos||0),0);
+  const estimativaCliente = c.precoVenda>0 ? totalVend * c.precoVenda : 0;
+  const estimativaEstoque = c.precoVenda>0 ? (c.estoque||0) * c.precoVenda : 0;
   document.getElementById('perfil-metrics').innerHTML=`
     <div class="metric blue"><div class="val">${cv.length}</div><div class="lbl">Total de visitas</div></div>
     <div class="metric amber"><div class="val">${totalVend}</div><div class="lbl">Brownies vendidos</div></div>
     <div class="metric teal"><div class="val">${totalRep}</div><div class="lbl">Brownies repostos</div></div>
-    <div class="metric teal"><div class="val">${fmtMoney(totalRec)}</div><div class="lbl">Total recebido</div></div>
+    <div class="metric teal"><div class="val">${fmtMoney(totalRec)}</div><div class="lbl">Total que você recebeu</div></div>
     ${saldo>0?`<div class="metric coral"><div class="val">${fmtMoney(saldo)}</div><div class="lbl">Saldo em aberto</div></div>`:''}
+    ${estimativaCliente>0?`<div class="metric amber"><div class="val">${fmtMoney(estimativaCliente)}</div><div class="lbl">Faturamento estimado do cliente</div></div>`:''}
+    ${estimativaEstoque>0?`<div class="metric blue"><div class="val">${fmtMoney(estimativaEstoque)}</div><div class="lbl">Estoque atual (valor cliente)</div></div>`:''}
   `;
   const st={brigadeiro:0,ninho:0,ninhoNutella:0};
   cv.forEach(v=>{SABORES.forEach(x=>{st[x.id]+=(v.sabores?v.sabores[x.id]||0:0);});});
