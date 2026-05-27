@@ -240,6 +240,7 @@ input[readonly]{background:var(--surface2);opacity:.8}
           <div class="field"><label>Estoque após</label><input type="number" id="v-estoque-depois" readonly placeholder="—"></div>
         </div>
         <div class="divider"></div>
+        <div id="v-saldo-alerta"></div>
         <h3 style="font-size:14px;font-weight:600;margin-bottom:.85rem;color:var(--text)"><i class="ti ti-cash" style="font-size:16px;vertical-align:-2px;margin-right:6px;color:var(--teal)"></i>Cobrança</h3>
         <div class="row">
           <div class="field"><label>Preço unitário (R$)</label><input type="number" id="v-preco" min="0" step="0.01" placeholder="0,00" oninput="calcVisita()"></div>
@@ -317,7 +318,26 @@ input[readonly]{background:var(--surface2);opacity:.8}
       <div class="field"><label>Referência</label><input type="text" id="c-ref" placeholder="Próximo ao..."></div>
     </div>
     <div class="divider"></div>
-    <h3 style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:.75rem"><i class="ti ti-package" style="font-size:15px;vertical-align:-2px;margin-right:6px"></i>Estoque em comodato por sabor</h3>
+    <h3 style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:.75rem"><i class="ti ti-flag" style="font-size:15px;vertical-align:-2px;margin-right:6px"></i>Reposição inicial <span style="font-size:11px;font-weight:400;color:var(--text3)">(primeira vez que deixou brownies — não muda depois)</span></h3>
+    <div class="row" style="margin-bottom:.5rem">
+      <div class="field"><label>Data da primeira visita</label><input type="date" id="c-data-inicio"></div>
+    </div>
+    <div class="sabores-grid" style="margin-bottom:.85rem">
+      <div class="sabor-card">
+        <div class="sabor-nome"><div class="sabor-dot" style="background:#6b3f10"></div>Brigadeiro</div>
+        <div class="field"><label>Qtd inicial</label><input type="number" id="c-ini-brig" min="0" placeholder="0"></div>
+      </div>
+      <div class="sabor-card">
+        <div class="sabor-nome"><div class="sabor-dot" style="background:#c9a84c"></div>Ninho</div>
+        <div class="field"><label>Qtd inicial</label><input type="number" id="c-ini-ninho" min="0" placeholder="0"></div>
+      </div>
+      <div class="sabor-card">
+        <div class="sabor-nome"><div class="sabor-dot" style="background:#7b3f8c"></div>Ninho c/ Nutella</div>
+        <div class="field"><label>Qtd inicial</label><input type="number" id="c-ini-nn" min="0" placeholder="0"></div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <h3 style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:.75rem"><i class="ti ti-package" style="font-size:15px;vertical-align:-2px;margin-right:6px"></i>Estoque atual em comodato</h3>
     <div class="sabores-grid" style="margin-bottom:.85rem">
       <div class="sabor-card">
         <div class="sabor-nome"><div class="sabor-dot" style="background:#6b3f10"></div>Brigadeiro</div>
@@ -402,18 +422,30 @@ function dbToCliente(r){
     estoqueBrig:r.estoque_brigadeiro||0,
     estoqueNinho:r.estoque_ninho||0,
     estoqueNN:r.estoque_ninho_nutella||0,
+    inicialBrig:r.inicial_brigadeiro||0,
+    inicialNinho:r.inicial_ninho||0,
+    inicialNN:r.inicial_ninho_nutella||0,
+    dataInicio:r.data_inicio||null,
     obs:r.obs||'',status:r.status||'ativo',diaVisita:r.dia_visita||'',
     precoVenda:r.preco_venda||0,criadoEm:r.criado_em};
 }
-function clienteToDb(c){
+function clienteToDb(c, isNew=false){
   const total=(c.estoqueBrig||0)+(c.estoqueNinho||0)+(c.estoqueNN||0);
-  return {id:c.id,nome:c.nome,responsavel:c.responsavel,telefone:c.telefone,whatsapp:c.whatsapp,
+  const db = {id:c.id,nome:c.nome,responsavel:c.responsavel,telefone:c.telefone,whatsapp:c.whatsapp,
     endereco:c.endereco,bairro:c.bairro,cidade:c.cidade,ref:c.ref,
     estoque:total,
     estoque_brigadeiro:c.estoqueBrig||0,
     estoque_ninho:c.estoqueNinho||0,
     estoque_ninho_nutella:c.estoqueNN||0,
     obs:c.obs,status:c.status,dia_visita:c.diaVisita,preco_venda:c.precoVenda||0};
+  // Inicial only saved once on creation
+  if(isNew){
+    db.inicial_brigadeiro = c.estoqueBrig||0;
+    db.inicial_ninho      = c.estoqueNinho||0;
+    db.inicial_ninho_nutella = c.estoqueNN||0;
+    db.data_inicio        = c.dataInicio || new Date().toISOString().slice(0,10);
+  }
+  return db;
 }
 function dbToVisita(r){
   return {id:r.id,clienteId:r.cliente_id,data:r.data,vendidos:r.vendidos||0,repostos:r.repostos||0,
@@ -665,7 +697,9 @@ function populateClientSelect(){
 
 // ─── MODAL CLIENTE ───────────────────────────────────────────────
 function openClientModal(c=null){
-  ['c-id','c-nome','c-responsavel','c-telefone','c-whatsapp','c-endereco','c-bairro','c-cidade','c-ref','c-est-brig','c-est-ninho','c-est-nn','c-preco-venda','c-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['c-id','c-nome','c-responsavel','c-telefone','c-whatsapp','c-endereco','c-bairro','c-cidade','c-ref',
+   'c-est-brig','c-est-ninho','c-est-nn','c-ini-brig','c-ini-ninho','c-ini-nn','c-data-inicio',
+   'c-preco-venda','c-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('c-status').value='ativo';
   document.getElementById('c-dia').value='';
   document.getElementById('modal-title').textContent=c?'Editar cliente':'Novo cliente';
@@ -682,10 +716,16 @@ function openClientModal(c=null){
     document.getElementById('c-est-brig').value=c.estoqueBrig||0;
     document.getElementById('c-est-ninho').value=c.estoqueNinho||0;
     document.getElementById('c-est-nn').value=c.estoqueNN||0;
+    document.getElementById('c-ini-brig').value=c.inicialBrig||0;
+    document.getElementById('c-ini-ninho').value=c.inicialNinho||0;
+    document.getElementById('c-ini-nn').value=c.inicialNN||0;
+    document.getElementById('c-data-inicio').value=c.dataInicio||'';
     document.getElementById('c-preco-venda').value=c.precoVenda||'';
     document.getElementById('c-obs').value=c.obs||'';
     document.getElementById('c-status').value=c.status||'ativo';
     document.getElementById('c-dia').value=c.diaVisita||'';
+  } else {
+    document.getElementById('c-data-inicio').value=new Date().toISOString().slice(0,10);
   }
   document.getElementById('modal-cliente').classList.add('open');
 }
@@ -703,17 +743,31 @@ async function salvarCliente(){
     estoqueBrig:+(document.getElementById('c-est-brig').value)||0,
     estoqueNinho:+(document.getElementById('c-est-ninho').value)||0,
     estoqueNN:+(document.getElementById('c-est-nn').value)||0,
+    inicialBrig:+(document.getElementById('c-ini-brig').value)||0,
+    inicialNinho:+(document.getElementById('c-ini-ninho').value)||0,
+    inicialNN:+(document.getElementById('c-ini-nn').value)||0,
+    dataInicio:document.getElementById('c-data-inicio').value||new Date().toISOString().slice(0,10),
     precoVenda:+(document.getElementById('c-preco-venda').value)||0,
     obs:document.getElementById('c-obs').value,
     status:document.getElementById('c-status').value,diaVisita:document.getElementById('c-dia').value};
   obj.estoque=(obj.estoqueBrig||0)+(obj.estoqueNinho||0)+(obj.estoqueNN||0);
   try {
     if(existingId){
-      await sbUpdate('bc_clientes', existingId, clienteToDb(obj));
+      const dbData = clienteToDb(obj, false);
+      // Also save inicial fields (allows filling in for existing clients)
+      dbData.inicial_brigadeiro    = obj.inicialBrig||0;
+      dbData.inicial_ninho         = obj.inicialNinho||0;
+      dbData.inicial_ninho_nutella = obj.inicialNN||0;
+      dbData.data_inicio           = obj.dataInicio||null;
+      await sbUpdate('bc_clientes', existingId, dbData);
       const idx=clientes.findIndex(c=>c.id===existingId);
       if(idx>=0)clientes[idx]=obj;
     } else {
-      await sbInsert('bc_clientes', clienteToDb(obj));
+      obj.dataInicio   = obj.dataInicio || new Date().toISOString().slice(0,10);
+      obj.inicialBrig  = obj.inicialBrig||0;
+      obj.inicialNinho = obj.inicialNinho||0;
+      obj.inicialNN    = obj.inicialNN||0;
+      await sbInsert('bc_clientes', clienteToDb(obj, true));
       clientes.push(obj);
     }
     closeModal(); renderClientes(); populateClientSelect(); renderDashboard();
@@ -734,16 +788,41 @@ async function deleteCliente(id){
   } catch(e){toast('Erro ao remover: '+e.message,false);}
 }
 
+function saldoCliente(clienteId){
+  const cv = visitas.filter(v=>v.clienteId===clienteId);
+  const totalCobrado  = cv.reduce((s,v)=>s+(+v.valor||0),0);
+  const totalRecebido = cv.reduce((s,v)=>s+(+v.recebido||0),0);
+  return Math.max(0, totalCobrado - totalRecebido);
+}
+
 // ─── NOVA VISITA ─────────────────────────────────────────────────
 function onClienteChange(){
   const c=clientes.find(x=>x.id===document.getElementById('v-cliente').value);
   const total=c?((c.estoqueBrig||0)+(c.estoqueNinho||0)+(c.estoqueNN||0)):0;
   document.getElementById('v-estoque-antes').value=c?total:'';
-  // Pre-fill repostos hints with current per-flavor stock
   if(c){
     const bEl=document.getElementById('s-brig-v'); if(bEl&&!bEl.value) bEl.placeholder=`estoque: ${c.estoqueBrig||0}`;
     const nEl=document.getElementById('s-ninho-v'); if(nEl&&!nEl.value) nEl.placeholder=`estoque: ${c.estoqueNinho||0}`;
     const nnEl=document.getElementById('s-nn-v'); if(nnEl&&!nnEl.value) nnEl.placeholder=`estoque: ${c.estoqueNN||0}`;
+    // Show previous outstanding balance
+    const saldoAnt = saldoCliente(c.id);
+    const alertEl = document.getElementById('v-saldo-alerta');
+    if(alertEl){
+      if(saldoAnt>0){
+        alertEl.innerHTML=`<div style="display:flex;align-items:center;gap:8px;padding:.75rem 1rem;background:var(--coral-bg);border:.5px solid #e8b4a0;border-radius:var(--radius);margin-bottom:.85rem">
+          <i class="ti ti-alert-circle" style="font-size:18px;color:var(--coral);flex-shrink:0"></i>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600;color:var(--coral)">Saldo anterior em aberto: ${fmtMoney(saldoAnt)}</div>
+            <div style="font-size:12px;color:var(--coral);opacity:.8;margin-top:2px">Se o cliente pagar a dívida hoje, inclua esse valor no campo "Valor recebido".</div>
+          </div>
+        </div>`;
+      } else {
+        alertEl.innerHTML='';
+      }
+    }
+  } else {
+    const alertEl = document.getElementById('v-saldo-alerta');
+    if(alertEl) alertEl.innerHTML='';
   }
   calcSabores();
 }
@@ -818,7 +897,12 @@ function renderVisitas(){
   list.sort((a,b)=>b.data.localeCompare(a.data));
   const totalV=list.reduce((s,v)=>s+totalVendidosVisita(v),0);
   const totalR=list.reduce((s,v)=>s+(+v.recebido||0),0);
-  const totalS=list.reduce((s,v)=>s+Math.max(0,(+v.valor||0)-(+v.recebido||0)),0);
+  // Saldo total: agrupa por cliente para não duplicar
+  const clientesNaLista=[...new Set(list.map(v=>v.clienteId))];
+  const totalS=clientesNaLista.reduce((s,cid)=>{
+    const todasCliente=visitas.filter(v=>v.clienteId===cid);
+    return s+Math.max(0,todasCliente.reduce((a,v)=>a+(+v.valor||0),0)-todasCliente.reduce((a,v)=>a+(+v.recebido||0),0));
+  },0);
   const sumEl=document.getElementById('visit-summary');
   if(sumEl&&list.length>0){
     sumEl.innerHTML=`<div class="metrics" style="margin-bottom:0">
@@ -832,13 +916,21 @@ function renderVisitas(){
   if(list.length===0){el.innerHTML='<div class="empty"><i class="ti ti-calendar-off"></i>Nenhuma visita encontrada.</div>';return;}
   el.innerHTML=list.map(v=>{
     const cl=clientes.find(c=>c.id===v.clienteId);
-    const saldo=Math.max(0,(+v.valor||0)-(+v.recebido||0));
+    // Saldo acumulado do cliente até esta visita (ordenado por data)
+    const todasVisitasCliente = visitas.filter(x=>x.clienteId===v.clienteId).sort((a,b)=>a.data.localeCompare(b.data));
+    const idxVisita = todasVisitasCliente.findIndex(x=>x.id===v.id);
+    const visitasAte = todasVisitasCliente.slice(0, idxVisita+1);
+    const saldoAcum = Math.max(0, visitasAte.reduce((s,x)=>s+(+x.valor||0),0) - visitasAte.reduce((s,x)=>s+(+x.recebido||0),0));
+    const recebeuExtra = (+v.recebido||0) > (+v.valor||0);
     return `<div class="visit-card">
       <div class="visit-header">
         <div><div style="font-size:14px;font-weight:600">${cl?cl.nome:'Cliente removido'}</div>
           <div style="font-size:12px;color:var(--text2)">${fmtDate(v.data)}${cl&&cl.responsavel?' · '+cl.responsavel:''}</div></div>
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-          ${saldo>0?`<span class="badge coral">saldo ${fmtMoney(saldo)}</span>`:'<span class="badge teal">pago</span>'}
+          ${saldoAcum>0
+            ? `<span class="badge coral">saldo acum. ${fmtMoney(saldoAcum)}</span>`
+            : `<span class="badge teal"><i class="ti ti-check" style="font-size:11px"></i> quitado</span>`}
+          ${recebeuExtra?`<span class="badge blue" title="Recebeu mais do que o cobrado nessa visita (incluiu dívidas anteriores)"><i class="ti ti-arrow-bear-right" style="font-size:11px"></i> incluiu dívida anterior</span>`:''}
           <button class="btn small danger" onclick="deleteVisita('${v.id}')"><i class="ti ti-trash"></i></button>
         </div>
       </div>
@@ -918,18 +1010,50 @@ function abrirPerfil(id){
   cv.forEach(v=>{SABORES.forEach(x=>{st[x.id]+=(v.sabores?v.sabores[x.id]||0:0);});});
   renderSaborBar('perfil-sabores-bar',st);
   const tlEl=document.getElementById('perfil-timeline');
-  tlEl.innerHTML=cv.length===0?'<div class="empty"><i class="ti ti-calendar-off"></i>Nenhuma visita registrada.</div>':
-    cv.map((v,i)=>{
-      const sd=Math.max(0,(+v.valor||0)-(+v.recebido||0)), isLast=i===cv.length-1;
+  const inicialTotal=(c.inicialBrig||0)+(c.inicialNinho||0)+(c.inicialNN||0);
+  const entradaInicial = inicialTotal>0 ? `
+    <div class="tl-item">
+      <div class="tl-left"><div class="tl-dot" style="background:var(--blue)"></div></div>
+      <div class="tl-body" style="padding-bottom:0">
+        <div class="tl-date">${c.dataInicio?fmtDate(c.dataInicio):'Data de cadastro'} — Primeira reposição</div>
+        <div class="tl-card" style="border-color:var(--blue-bg)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;flex-wrap:wrap;gap:6px">
+            <div style="font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px">
+              <span class="badge blue"><i class="ti ti-flag" style="font-size:11px"></i> Reposição inicial</span>
+              <span style="font-size:12px;color:var(--text2)">${inicialTotal} brownies deixados</span>
+            </div>
+          </div>
+          <div class="tl-stats">
+            <div class="tl-stat"><div class="n" style="color:var(--blue)">${inicialTotal}</div><div class="l">total inicial</div></div>
+            <div class="tl-stat"><div class="n" style="color:#6b3f10">${c.inicialBrig||0}</div><div class="l">brigadeiro</div></div>
+            <div class="tl-stat"><div class="n" style="color:#8a6d10">${c.inicialNinho||0}</div><div class="l">ninho</div></div>
+            <div class="tl-stat"><div class="n" style="color:#7b3f8c">${c.inicialNN||0}</div><div class="l">n. nutella</div></div>
+          </div>
+        </div>
+      </div>
+    </div>` : '';
+
+  tlEl.innerHTML=cv.length===0 && inicialTotal===0
+    ? '<div class="empty"><i class="ti ti-calendar-off"></i>Nenhuma visita registrada.</div>'
+    : cv.map((v,i)=>{
+      // Saldo acumulado: calcula do mais antigo até esta visita
+      const cvAsc=[...cv].reverse();
+      const idxAsc=cvAsc.findIndex(x=>x.id===v.id);
+      const visitasAte=cvAsc.slice(0,idxAsc+1);
+      const sdAcum=Math.max(0,visitasAte.reduce((s,x)=>s+(+x.valor||0),0)-visitasAte.reduce((s,x)=>s+(+x.recebido||0),0));
+      const recebeuExtra=(+v.recebido||0)>(+v.valor||0);
       return `<div class="tl-item">
-        <div class="tl-left"><div class="tl-dot ${sd>0?'coral':'teal'}"></div>${!isLast?'<div class="tl-line"></div>':''}</div>
-        <div class="tl-body" style="${isLast?'padding-bottom:0':''}">
+        <div class="tl-left"><div class="tl-dot ${sdAcum>0?'coral':'teal'}"></div><div class="tl-line"></div></div>
+        <div class="tl-body">
           <div class="tl-date">${fmtDate(v.data)} — ${getDiaSemana(v.data)}</div>
           <div class="tl-card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;flex-wrap:wrap;gap:6px">
               <div style="font-size:13px;font-weight:500">${i===0?'<span class="badge amber" style="margin-right:6px">Mais recente</span>':''}Visita #${cv.length-i}</div>
-              <div style="display:flex;gap:6px;align-items:center">
-                ${sd>0?`<span class="badge coral">saldo ${fmtMoney(sd)}</span>`:'<span class="badge teal"><i class="ti ti-check" style="font-size:11px"></i> pago</span>'}
+              <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                ${sdAcum>0
+                  ?`<span class="badge coral">saldo acum. ${fmtMoney(sdAcum)}</span>`
+                  :'<span class="badge teal"><i class="ti ti-check" style="font-size:11px"></i> quitado</span>'}
+                ${recebeuExtra?`<span class="badge blue" title="Recebeu mais do que o cobrado — inclui dívida anterior"><i class="ti ti-arrow-bear-right" style="font-size:11px"></i> incluiu dívida anterior</span>`:''}
                 <button class="btn small danger" onclick="deleteVisitaPerfil('${v.id}','${c.id}')"><i class="ti ti-trash"></i></button>
               </div>
             </div>
@@ -946,7 +1070,7 @@ function abrirPerfil(id){
           </div>
         </div>
       </div>`;
-    }).join('');
+    }).join('') + entradaInicial;
   showPage('perfil');
 }
 
