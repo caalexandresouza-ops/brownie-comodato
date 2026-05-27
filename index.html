@@ -325,32 +325,34 @@ input[readonly]{background:var(--surface2);opacity:.8}
     <div class="sabores-grid" style="margin-bottom:.85rem">
       <div class="sabor-card">
         <div class="sabor-nome"><div class="sabor-dot" style="background:#6b3f10"></div>Brigadeiro</div>
-        <div class="field"><label>Qtd inicial</label><input type="number" id="c-ini-brig" min="0" placeholder="0"></div>
+        <div class="field"><label>Qtd inicial</label><input type="number" id="c-ini-brig" min="0" placeholder="0" oninput="syncEstoqueInicial()"></div>
       </div>
       <div class="sabor-card">
         <div class="sabor-nome"><div class="sabor-dot" style="background:#c9a84c"></div>Ninho</div>
-        <div class="field"><label>Qtd inicial</label><input type="number" id="c-ini-ninho" min="0" placeholder="0"></div>
+        <div class="field"><label>Qtd inicial</label><input type="number" id="c-ini-ninho" min="0" placeholder="0" oninput="syncEstoqueInicial()"></div>
       </div>
       <div class="sabor-card">
         <div class="sabor-nome"><div class="sabor-dot" style="background:#7b3f8c"></div>Ninho c/ Nutella</div>
-        <div class="field"><label>Qtd inicial</label><input type="number" id="c-ini-nn" min="0" placeholder="0"></div>
+        <div class="field"><label>Qtd inicial</label><input type="number" id="c-ini-nn" min="0" placeholder="0" oninput="syncEstoqueInicial()"></div>
       </div>
     </div>
+    <div id="section-estoque-atual">
     <div class="divider"></div>
-    <h3 style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:.75rem"><i class="ti ti-package" style="font-size:15px;vertical-align:-2px;margin-right:6px"></i>Estoque atual em comodato</h3>
+    <h3 style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:.4rem"><i class="ti ti-package" style="font-size:15px;vertical-align:-2px;margin-right:6px"></i>Estoque atual em comodato <span style="font-size:11px;font-weight:400;color:var(--text3)">(edite se o estoque atual for diferente do inicial)</span></h3>
     <div class="sabores-grid" style="margin-bottom:.85rem">
       <div class="sabor-card">
         <div class="sabor-nome"><div class="sabor-dot" style="background:#6b3f10"></div>Brigadeiro</div>
-        <div class="field"><label>Quantidade</label><input type="number" id="c-est-brig" min="0" placeholder="0"></div>
+        <div class="field"><label>Quantidade atual</label><input type="number" id="c-est-brig" min="0" placeholder="0"></div>
       </div>
       <div class="sabor-card">
         <div class="sabor-nome"><div class="sabor-dot" style="background:#c9a84c"></div>Ninho</div>
-        <div class="field"><label>Quantidade</label><input type="number" id="c-est-ninho" min="0" placeholder="0"></div>
+        <div class="field"><label>Quantidade atual</label><input type="number" id="c-est-ninho" min="0" placeholder="0"></div>
       </div>
       <div class="sabor-card">
         <div class="sabor-nome"><div class="sabor-dot" style="background:#7b3f8c"></div>Ninho c/ Nutella</div>
-        <div class="field"><label>Quantidade</label><input type="number" id="c-est-nn" min="0" placeholder="0"></div>
+        <div class="field"><label>Quantidade atual</label><input type="number" id="c-est-nn" min="0" placeholder="0"></div>
       </div>
+    </div>
     </div>
     <div class="row">
       <div class="field"><label>Preço de venda do cliente (R$)</label><input type="number" id="c-preco-venda" min="0" step="0.01" placeholder="Ex: 8,00" title="Quanto o cliente cobra pelo brownie"></div>
@@ -696,6 +698,18 @@ function populateClientSelect(){
 }
 
 // ─── MODAL CLIENTE ───────────────────────────────────────────────
+// Quando cliente é NOVO, sincroniza inicial → estoque atual automaticamente
+function syncEstoqueInicial(){
+  const isNew = !document.getElementById('c-id').value;
+  if(!isNew) return; // edição: não toca no estoque atual
+  const b  = document.getElementById('c-ini-brig').value;
+  const n  = document.getElementById('c-ini-ninho').value;
+  const nn = document.getElementById('c-ini-nn').value;
+  document.getElementById('c-est-brig').value  = b;
+  document.getElementById('c-est-ninho').value = n;
+  document.getElementById('c-est-nn').value    = nn;
+}
+
 function openClientModal(c=null){
   ['c-id','c-nome','c-responsavel','c-telefone','c-whatsapp','c-endereco','c-bairro','c-cidade','c-ref',
    'c-est-brig','c-est-ninho','c-est-nn','c-ini-brig','c-ini-ninho','c-ini-nn','c-data-inicio',
@@ -703,6 +717,12 @@ function openClientModal(c=null){
   document.getElementById('c-status').value='ativo';
   document.getElementById('c-dia').value='';
   document.getElementById('modal-title').textContent=c?'Editar cliente':'Novo cliente';
+
+  // Novo cliente: esconde seção de estoque atual (será preenchida automaticamente pelo inicial)
+  // Edição: mostra para poder ajustar manualmente
+  const secaoEstoque = document.getElementById('section-estoque-atual');
+  if(secaoEstoque) secaoEstoque.style.display = c ? 'block' : 'none';
+
   if(c){
     document.getElementById('c-id').value=c.id;
     document.getElementById('c-nome').value=c.nome||'';
@@ -780,8 +800,18 @@ function editCliente(id){openClientModal(clientes.find(c=>c.id===id));}
 
 async function deleteCliente(id){
   const c=clientes.find(x=>x.id===id); if(!c)return;
-  if(!confirm('Remover "'+c.nome+'"? O histórico de visitas será mantido.'))return;
+  const nVisitas=visitas.filter(v=>v.clienteId===id).length;
+  const msg = nVisitas>0
+    ? `Remover "${c.nome}"?\n\nAtenção: esse cliente tem ${nVisitas} visita(s) registrada(s) que também serão apagadas.`
+    : `Remover "${c.nome}"?`;
+  if(!confirm(msg))return;
   try {
+    // Apaga visitas do cliente primeiro (foreign key)
+    if(nVisitas>0){
+      const r=await fetch(`${SB_URL}/rest/v1/bc_visitas?cliente_id=eq.${id}`,{method:'DELETE',headers:HEADERS});
+      if(!r.ok) throw new Error(await r.text());
+      visitas=visitas.filter(v=>v.clienteId!==id);
+    }
     await sbDelete('bc_clientes',id);
     clientes=clientes.filter(x=>x.id!==id);
     renderClientes(); renderDashboard(); toast('Cliente removido.');
