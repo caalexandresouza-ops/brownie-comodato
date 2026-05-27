@@ -28,6 +28,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .nav-btn i{font-size:18px}
 .main{margin-left:220px;padding:2rem;flex:1;max-width:960px}
 .page{display:none}.page.active{display:block}
+#page-relatorios.active{display:block}
 .page-title{font-size:20px;font-weight:600;margin-bottom:1.5rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
 .period-tabs{display:flex;gap:4px;margin-bottom:1.5rem;flex-wrap:wrap}
 .ptab{padding:6px 14px;border-radius:20px;border:.5px solid var(--border-md);background:transparent;color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;transition:all .15s}
@@ -143,6 +144,7 @@ input[readonly]{background:var(--surface2);opacity:.8}
     <button class="nav-btn" onclick="showPage('clientes')" id="nav-clientes"><i class="ti ti-building-store"></i><span>Clientes</span></button>
     <button class="nav-btn" onclick="showPage('nova-visita')" id="nav-nova-visita"><i class="ti ti-plus"></i><span>Nova Visita</span></button>
     <button class="nav-btn" onclick="showPage('visitas')" id="nav-visitas"><i class="ti ti-calendar-check"></i><span>Histórico</span></button>
+    <button class="nav-btn" onclick="showPage('relatorios')" id="nav-relatorios"><i class="ti ti-chart-line"></i><span>Relatórios</span></button>
   </nav>
 
   <main class="main">
@@ -243,7 +245,7 @@ input[readonly]{background:var(--surface2);opacity:.8}
         <div id="v-saldo-alerta"></div>
         <h3 style="font-size:14px;font-weight:600;margin-bottom:.85rem;color:var(--text)"><i class="ti ti-cash" style="font-size:16px;vertical-align:-2px;margin-right:6px;color:var(--teal)"></i>Cobrança</h3>
         <div class="row">
-          <div class="field"><label>Preço unitário (R$)</label><input type="number" id="v-preco" min="0" step="0.01" placeholder="0,00" oninput="calcVisita()"></div>
+          <div class="field"><label>Meu preço por brownie (R$) <span style="font-size:10px;color:var(--amber);font-weight:600">← vem do cadastro</span></label><input type="number" id="v-preco" min="0" step="0.01" placeholder="0,00" oninput="calcVisita()" style="border-color:var(--amber)"></div>
           <div class="field"><label>Valor cobrado (R$)</label><input type="number" id="v-valor" min="0" step="0.01" placeholder="0,00"></div>
           <div class="field"><label>Valor recebido (R$)</label><input type="number" id="v-recebido" min="0" step="0.01" placeholder="0,00"></div>
         </div>
@@ -290,6 +292,40 @@ input[readonly]{background:var(--surface2);opacity:.8}
       <div class="card">
         <h3><i class="ti ti-timeline"></i>Histórico de visitas</h3>
         <div class="timeline" id="perfil-timeline"></div>
+      </div>
+    </div>
+
+    <!-- RELATÓRIOS -->
+    <div id="page-relatorios" class="page">
+      <div class="page-title">Relatórios &amp; Lucro</div>
+      <div class="card" style="margin-bottom:1.25rem">
+        <h3><i class="ti ti-calculator"></i>Custo de produção</h3>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div class="field" style="max-width:220px;margin-bottom:0">
+            <label>Custo por brownie (R$)</label>
+            <input type="text" inputmode="decimal" id="rel-custo" placeholder="Ex: 2,50" oninput="salvarCusto();renderRelatorios()">
+          </div>
+          <div style="font-size:12px;color:var(--text3);max-width:320px;line-height:1.6">Informe quanto custa produzir cada brownie. Usado para calcular lucro e margem em todos os relatórios.</div>
+        </div>
+      </div>
+      <div class="period-tabs">
+        <button class="ptab active" onclick="setRelPeriod('mes',this)">Este mês</button>
+        <button class="ptab" onclick="setRelPeriod('mes_passado',this)">Mês passado</button>
+        <button class="ptab" onclick="setRelPeriod('ano',this)">Este ano</button>
+        <button class="ptab" onclick="setRelPeriod('todos',this)">Todos</button>
+      </div>
+      <div class="metrics" id="rel-metrics" style="margin-bottom:1.25rem"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem">
+        <div class="card" style="margin-bottom:0"><h3><i class="ti ti-chart-bar"></i>Vendas por mês</h3><canvas id="chart-mensal" height="180"></canvas></div>
+        <div class="card" style="margin-bottom:0"><h3><i class="ti ti-cookie"></i>Participação por sabor</h3><canvas id="chart-sabores" height="180"></canvas></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem">
+        <div class="card" style="margin-bottom:0"><h3><i class="ti ti-coins"></i>Receita · Custo · Lucro <span id="rel-fin-label" style="font-size:11px;color:var(--text3)"></span></h3><canvas id="chart-financeiro" height="180"></canvas></div>
+        <div class="card" style="margin-bottom:0"><h3><i class="ti ti-calendar-week"></i>Visitas por dia da semana</h3><canvas id="chart-dias" height="180"></canvas></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem">
+        <div class="card" style="margin-bottom:0"><h3><i class="ti ti-trophy"></i>Ranking de clientes <span id="rel-rank-label" style="font-size:11px;color:var(--text3)"></span></h3><div id="rel-ranking"></div></div>
+        <div class="card" style="margin-bottom:0"><h3><i class="ti ti-trending-up"></i>Projeção do mês atual</h3><div id="rel-projecao"></div></div>
       </div>
     </div>
 
@@ -355,7 +391,8 @@ input[readonly]{background:var(--surface2);opacity:.8}
     </div>
     </div>
     <div class="row">
-      <div class="field"><label>Preço de venda do cliente (R$)</label><input type="number" id="c-preco-venda" min="0" step="0.01" placeholder="Ex: 8,00" title="Quanto o cliente cobra pelo brownie"></div>
+      <div class="field"><label>Meu preço de venda (R$)</label><input type="number" id="c-preco-venda" min="0" step="0.01" placeholder="Ex: 5,00" title="Quanto você cobra deste cliente por brownie"></div>
+      <div class="field"><label>Preço de revenda do cliente (R$)</label><input type="number" id="c-preco-revenda" min="0" step="0.01" placeholder="Ex: 8,00" title="Quanto o cliente cobra dos consumidores"></div>
       <div class="field"><label>Dia preferencial</label>
         <select id="c-dia">
           <option value="">Qualquer dia</option>
@@ -468,7 +505,7 @@ async function loadData(){
     toast('Erro ao carregar dados: '+e.message, false);
   }
   document.getElementById('loading').style.display='none';
-  document.getElementById('v-data').value = new Date().toISOString().slice(0,10);
+  document.getElementById('v-data').value = todayLocal();
   populateClientSelect();
   renderDashboard();
 }
@@ -480,8 +517,8 @@ function fmtDate(d){ if(!d)return '—'; return new Date(d+'T12:00:00').toLocale
 function fmtMoney(v){ return 'R$ '+(+(v)||0).toFixed(2).replace('.',','); }
 function getDiaSemana(d){ if(!d)return ''; return new Date(d+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long'}); }
 function totalVendidosVisita(v){
-  if(v.sabores) return (v.sabores.brigadeiro||0)+(v.sabores.ninho||0)+(v.sabores.ninhoNutella||0);
-  return +v.vendidos||0;
+  const fromSabores = v.sabores ? (v.sabores.brigadeiro||0)+(v.sabores.ninho||0)+(v.sabores.ninhoNutella||0) : 0;
+  return fromSabores > 0 ? fromSabores : (+v.vendidos||0);
 }
 function toast(msg,ok=true){
   const t=document.getElementById('toast');
@@ -497,19 +534,25 @@ function setLoading(btnId, loading){
 }
 
 // ─── PERIOD ──────────────────────────────────────────────────────
+function todayLocal(){
+  const d=new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 function getWeekStart(){
-  const d=new Date(),day=d.getDay(),diff=d.getDate()-day+(day===0?-6:1);
-  const s=new Date(d); s.setDate(diff); return s.toISOString().slice(0,10);
+  const d=new Date(), day=d.getDay(), diff=d.getDate()-day+(day===0?-6:1);
+  const s=new Date(d.getFullYear(),d.getMonth(),diff);
+  return `${s.getFullYear()}-${String(s.getMonth()+1).padStart(2,'0')}-${String(s.getDate()).padStart(2,'0')}`;
 }
 function getPeriodRange(p){
   const now=new Date(),y=now.getFullYear(),m=now.getMonth();
-  if(p==='semana') return {from:getWeekStart(),to:now.toISOString().slice(0,10)};
-  if(p==='mes')    return {from:`${y}-${String(m+1).padStart(2,'0')}-01`,to:now.toISOString().slice(0,10)};
+  const today=todayLocal();
+  if(p==='semana') return {from:getWeekStart(),to:today};
+  if(p==='mes')    return {from:`${y}-${String(m+1).padStart(2,'0')}-01`,to:today};
   if(p==='mes_passado'){
     const pm=m===0?11:m-1,py=m===0?y-1:y,ld=new Date(y,m,0).getDate();
     return {from:`${py}-${String(pm+1).padStart(2,'0')}-01`,to:`${py}-${String(pm+1).padStart(2,'0')}-${ld}`};
   }
-  if(p==='ano') return {from:`${y}-01-01`,to:now.toISOString().slice(0,10)};
+  if(p==='ano') return {from:`${y}-01-01`,to:today};
   return null;
 }
 function filterByPeriod(list,p){
@@ -668,7 +711,8 @@ function renderClientes(){
         ${(c.estoqueBrig||0)>0?`<span class="badge amber" style="background:#f5ebe0;color:#6b3f10"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#6b3f10;margin-right:4px"></span>Brig: ${c.estoqueBrig}</span>`:''}
         ${(c.estoqueNinho||0)>0?`<span class="badge amber" style="background:#fdf8e6;color:#8a6d10"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#c9a84c;margin-right:4px"></span>Ninho: ${c.estoqueNinho}</span>`:''}
         ${(c.estoqueNN||0)>0?`<span class="badge amber" style="background:#f5eefa;color:#7b3f8c"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#7b3f8c;margin-right:4px"></span>N.Nutella: ${c.estoqueNN}</span>`:''}
-        ${c.precoVenda>0?`<span class="badge teal"><i class="ti ti-tag" style="font-size:12px"></i>vende a ${fmtMoney(c.precoVenda)}</span>`:''}
+        ${c.precoVenda>0?`<span class="badge teal"><i class="ti ti-tag" style="font-size:12px"></i>vendo a ${fmtMoney(c.precoVenda)}</span>`:''}
+        ${c.precoRevenda>0?`<span class="badge blue"><i class="ti ti-tag" style="font-size:12px"></i>revende a ${fmtMoney(c.precoRevenda)}</span>`:''}
         ${ult?`<span class="tag">Última visita: ${fmtDate(ult.data)}</span>`:'<span class="tag">Sem visitas</span>'}
         ${totalV>0?`<span class="tag">${totalV} vendidos</span>`:''}
         ${totalR>0?`<span class="tag">${fmtMoney(totalR)} recebido</span>`:''}
@@ -713,7 +757,7 @@ function syncEstoqueInicial(){
 function openClientModal(c=null){
   ['c-id','c-nome','c-responsavel','c-telefone','c-whatsapp','c-endereco','c-bairro','c-cidade','c-ref',
    'c-est-brig','c-est-ninho','c-est-nn','c-ini-brig','c-ini-ninho','c-ini-nn','c-data-inicio',
-   'c-preco-venda','c-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+   'c-preco-venda','c-preco-revenda','c-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('c-status').value='ativo';
   document.getElementById('c-dia').value='';
   document.getElementById('modal-title').textContent=c?'Editar cliente':'Novo cliente';
@@ -741,6 +785,7 @@ function openClientModal(c=null){
     document.getElementById('c-ini-nn').value=c.inicialNN||0;
     document.getElementById('c-data-inicio').value=c.dataInicio||'';
     document.getElementById('c-preco-venda').value=c.precoVenda||'';
+    document.getElementById('c-preco-revenda').value=c.precoRevenda||'';
     document.getElementById('c-obs').value=c.obs||'';
     document.getElementById('c-status').value=c.status||'ativo';
     document.getElementById('c-dia').value=c.diaVisita||'';
@@ -768,6 +813,7 @@ async function salvarCliente(){
     inicialNN:+(document.getElementById('c-ini-nn').value)||0,
     dataInicio:document.getElementById('c-data-inicio').value||new Date().toISOString().slice(0,10),
     precoVenda:+(document.getElementById('c-preco-venda').value)||0,
+    precoRevenda:+(document.getElementById('c-preco-revenda').value)||0,
     obs:document.getElementById('c-obs').value,
     status:document.getElementById('c-status').value,diaVisita:document.getElementById('c-dia').value};
   obj.estoque=(obj.estoqueBrig||0)+(obj.estoqueNinho||0)+(obj.estoqueNN||0);
@@ -830,6 +876,13 @@ function onClienteChange(){
   const c=clientes.find(x=>x.id===document.getElementById('v-cliente').value);
   const total=c?((c.estoqueBrig||0)+(c.estoqueNinho||0)+(c.estoqueNN||0)):0;
   document.getElementById('v-estoque-antes').value=c?total:'';
+
+  // Preenche preço unitário automaticamente com o preço do cliente
+  if(c && c.precoVenda>0){
+    document.getElementById('v-preco').value=c.precoVenda.toFixed(2);
+  } else {
+    document.getElementById('v-preco').value='';
+  }
   if(c){
     const bEl=document.getElementById('s-brig-v'); if(bEl&&!bEl.value) bEl.placeholder=`estoque: ${c.estoqueBrig||0}`;
     const nEl=document.getElementById('s-ninho-v'); if(nEl&&!nEl.value) nEl.placeholder=`estoque: ${c.estoqueNinho||0}`;
@@ -867,13 +920,16 @@ function calcSabores(){
   calcVisita();
 }
 function calcVisita(){
-  const preco=+(document.getElementById('v-preco').value)||0, vendidos=+(document.getElementById('v-vendidos').value)||0;
-  if(preco>0&&vendidos>0){const vEl=document.getElementById('v-valor');if(!vEl.value)vEl.value=(preco*vendidos).toFixed(2);}
+  const preco=+(document.getElementById('v-preco').value)||0;
+  const vendidos=+(document.getElementById('v-vendidos').value)||0;
+  if(preco>0 && vendidos>0){
+    document.getElementById('v-valor').value=(preco*vendidos).toFixed(2);
+  }
 }
 function clearVisita(){
   ['v-cliente','v-preco','v-valor','v-recebido','v-obs','s-brig-v','s-brig-r','s-ninho-v','s-ninho-r','s-nn-v','s-nn-r'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   ['v-vendidos','v-repostos','v-estoque-antes','v-estoque-depois'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  document.getElementById('v-data').value=new Date().toISOString().slice(0,10);
+  document.getElementById('v-data').value=todayLocal();
 }
 
 async function salvarVisita(){
@@ -1025,16 +1081,12 @@ function abrirPerfil(id){
   const totalRec=cv.reduce((s,v)=>s+(+v.recebido||0),0);
   const saldo=Math.max(0,cv.reduce((s,v)=>s+(+v.valor||0),0)-totalRec);
   const totalRep=cv.reduce((s,v)=>s+(+v.repostos||0),0);
-  const estimativaCliente = c.precoVenda>0 ? totalVend * c.precoVenda : 0;
-  const estimativaEstoque = c.precoVenda>0 ? (c.estoque||0) * c.precoVenda : 0;
   document.getElementById('perfil-metrics').innerHTML=`
     <div class="metric blue"><div class="val">${cv.length}</div><div class="lbl">Total de visitas</div></div>
     <div class="metric amber"><div class="val">${totalVend}</div><div class="lbl">Brownies vendidos</div></div>
     <div class="metric teal"><div class="val">${totalRep}</div><div class="lbl">Brownies repostos</div></div>
     <div class="metric teal"><div class="val">${fmtMoney(totalRec)}</div><div class="lbl">Total que você recebeu</div></div>
     ${saldo>0?`<div class="metric coral"><div class="val">${fmtMoney(saldo)}</div><div class="lbl">Saldo em aberto</div></div>`:''}
-    ${estimativaCliente>0?`<div class="metric amber"><div class="val">${fmtMoney(estimativaCliente)}</div><div class="lbl">Faturamento estimado do cliente</div></div>`:''}
-    ${estimativaEstoque>0?`<div class="metric blue"><div class="val">${fmtMoney(estimativaEstoque)}</div><div class="lbl">Estoque atual (valor cliente)</div></div>`:''}
   `;
   const st={brigadeiro:0,ninho:0,ninhoNutella:0};
   cv.forEach(v=>{SABORES.forEach(x=>{st[x.id]+=(v.sabores?v.sabores[x.id]||0:0);});});
@@ -1122,12 +1174,261 @@ function showPage(p){
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
-  const nm={dashboard:'dashboard',clientes:'clientes',perfil:'clientes','nova-visita':'nova-visita',visitas:'visitas'};
+  const nm={dashboard:'dashboard',clientes:'clientes',perfil:'clientes','nova-visita':'nova-visita',visitas:'visitas',relatorios:'relatorios'};
   const nid=nm[p]; if(nid)document.getElementById('nav-'+nid).classList.add('active');
   if(p==='clientes')renderClientes();
   if(p==='visitas'){populateClientSelect();renderVisitas();}
   if(p==='dashboard')renderDashboard();
   if(p==='nova-visita')populateClientSelect();
+  if(p==='relatorios'){carregarCusto();renderRelatorios();}
+}
+
+// ─── RELATÓRIOS ──────────────────────────────────────────────────
+let relPeriod = 'mes';
+let custoBrownie = 0;
+
+function salvarCusto(){
+  const raw = (document.getElementById('rel-custo').value||'').replace(',','.');
+  const v = parseFloat(raw)||0;
+  custoBrownie = v;
+  try { localStorage.setItem('bc_custo_brownie', v); } catch(e){}
+}
+function carregarCusto(){
+  try {
+    const s = localStorage.getItem('bc_custo_brownie');
+    if(s){ custoBrownie = parseFloat(s)||0; const el=document.getElementById('rel-custo'); if(el)el.value=custoBrownie||''; }
+  } catch(e){}
+}
+
+function setRelPeriod(p, btn){
+  relPeriod = p;
+  document.querySelectorAll('#page-relatorios .ptab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderRelatorios();
+}
+
+function drawBarChart(canvasId, labels, datasets, opts={}){
+  const canvas = document.getElementById(canvasId); if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth || 320;
+  canvas.width = W; canvas.height = parseInt(canvas.getAttribute('height'))||180;
+  const H = canvas.height;
+  const pad = {top:20, bottom:36, left:48, right:12};
+  const chartW = W - pad.left - pad.right;
+  const chartH = H - pad.top - pad.bottom;
+  ctx.clearRect(0,0,W,H);
+
+  const allVals = datasets.flatMap(d=>d.data);
+  const maxVal = Math.max(...allVals, 1);
+  const ySteps = 4;
+  ctx.font = '10px sans-serif';
+  ctx.fillStyle = '#9c9484';
+  ctx.textAlign = 'right';
+  for(let i=0;i<=ySteps;i++){
+    const val = Math.round((maxVal/ySteps)*i);
+    const y = pad.top + chartH - (chartH*(i/ySteps));
+    ctx.fillText(opts.money ? 'R$'+val : val, pad.left-6, y+3);
+    ctx.strokeStyle='#e8e4dc'; ctx.lineWidth=0.5;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left+chartW, y); ctx.stroke();
+  }
+
+  const nGroups = labels.length;
+  const groupW = chartW / nGroups;
+  const barW = Math.min(groupW * 0.6 / datasets.length, 28);
+  const groupPad = (groupW - barW * datasets.length) / 2;
+
+  datasets.forEach((ds, di)=>{
+    ds.data.forEach((val, gi)=>{
+      const x = pad.left + gi*groupW + groupPad + di*barW;
+      const barH = Math.max(0, (val/maxVal)*chartH);
+      const y = pad.top + chartH - barH;
+      ctx.fillStyle = ds.color;
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(x, y, barW-2, barH, [3,3,0,0]) : ctx.rect(x, y, barW-2, barH);
+      ctx.fill();
+    });
+  });
+
+  ctx.fillStyle = '#6b6659';
+  ctx.textAlign = 'center';
+  ctx.font = '10px sans-serif';
+  labels.forEach((lbl, gi)=>{
+    const x = pad.left + gi*groupW + groupW/2;
+    ctx.fillText(lbl, x, H - 8);
+  });
+
+  if(datasets.length > 1){
+    let lx = pad.left;
+    datasets.forEach(ds=>{
+      ctx.fillStyle = ds.color;
+      ctx.fillRect(lx, 4, 10, 8);
+      ctx.fillStyle = '#6b6659';
+      ctx.textAlign = 'left';
+      ctx.font = '10px sans-serif';
+      ctx.fillText(ds.label, lx+13, 12);
+      lx += ctx.measureText(ds.label).width + 28;
+    });
+  }
+}
+
+function drawPieChart(canvasId, labels, values, colors){
+  const canvas = document.getElementById(canvasId); if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth || 320;
+  canvas.width = W; canvas.height = parseInt(canvas.getAttribute('height'))||180;
+  const H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+  const total = values.reduce((s,v)=>s+v,0);
+  if(total === 0){
+    ctx.fillStyle='#9c9484'; ctx.font='12px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('Sem dados no período', W/2, H/2); return;
+  }
+  const cx = W*0.35, cy = H/2, r = Math.min(cx, cy)-12;
+  let angle = -Math.PI/2;
+  values.forEach((v, i)=>{
+    const slice = (v/total)*Math.PI*2;
+    ctx.beginPath(); ctx.moveTo(cx,cy);
+    ctx.arc(cx, cy, r, angle, angle+slice);
+    ctx.closePath(); ctx.fillStyle = colors[i]; ctx.fill();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
+    angle += slice;
+  });
+  // Legend
+  const lx = W*0.68, ly0 = H/2 - (labels.length*18)/2;
+  labels.forEach((lbl,i)=>{
+    const y = ly0 + i*20;
+    ctx.fillStyle = colors[i];
+    ctx.beginPath(); ctx.arc(lx, y, 6, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#1a1814'; ctx.font = '11px sans-serif'; ctx.textAlign='left';
+    const pct = total>0 ? Math.round((values[i]/total)*100) : 0;
+    ctx.fillText(`${lbl} ${pct}%`, lx+10, y+4);
+  });
+}
+
+function renderRelatorios(){
+  carregarCusto();
+  const custo = custoBrownie;
+  const filtradas = filterByPeriod(visitas, relPeriod);
+  const totalVend = filtradas.reduce((s,v)=>s+totalVendidosVisita(v),0);
+  const receita = filtradas.reduce((s,v)=>s+(+v.recebido||0),0);
+  const custoTotal = custo * totalVend;
+  const lucro = receita - custoTotal;
+  const margem = receita > 0 ? Math.round((lucro/receita)*100) : 0;
+  const ticketMedio = filtradas.length > 0 ? receita / filtradas.length : 0;
+  const mediaPorVisita = filtradas.length > 0 ? totalVend / filtradas.length : 0;
+  const saldoAberto = filtradas.reduce((s,v)=>s+Math.max(0,(+v.valor||0)-(+v.recebido||0)),0);
+  const label = periodLabels[relPeriod] || '';
+
+  document.getElementById('rel-metrics').innerHTML = `
+    <div class="metric teal"><div class="val">${totalVend}</div><div class="lbl">Brownies vendidos</div></div>
+    <div class="metric teal"><div class="val">${fmtMoney(receita)}</div><div class="lbl">Receita recebida</div></div>
+    ${custo>0?`<div class="metric coral"><div class="val">${fmtMoney(custoTotal)}</div><div class="lbl">Custo total</div></div>`:''}
+    ${custo>0?`<div class="metric amber"><div class="val">${fmtMoney(lucro)}</div><div class="lbl">Lucro estimado</div></div>`:''}
+    ${custo>0?`<div class="metric blue"><div class="val">${margem}%</div><div class="lbl">Margem</div></div>`:''}
+    <div class="metric blue"><div class="val">${fmtMoney(ticketMedio)}</div><div class="lbl">Ticket médio / visita</div></div>
+    <div class="metric amber"><div class="val">${mediaPorVisita.toFixed(1)}</div><div class="lbl">Média brownies / visita</div></div>
+    ${saldoAberto>0?`<div class="metric coral"><div class="val">${fmtMoney(saldoAberto)}</div><div class="lbl">Saldo em aberto</div></div>`:''}
+  `;
+
+  // Gráfico: vendas por mês (últimos 6 meses)
+  const meses6 = [];
+  for(let i=5;i>=0;i--){
+    const d = new Date(); d.setDate(1); d.setMonth(d.getMonth()-i);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const nomeM = d.toLocaleDateString('pt-BR',{month:'short'}).replace('.','');
+    const vends = visitas.filter(v=>v.data&&v.data.startsWith(key)).reduce((s,v)=>s+totalVendidosVisita(v),0);
+    const rec   = visitas.filter(v=>v.data&&v.data.startsWith(key)).reduce((s,v)=>s+(+v.recebido||0),0);
+    meses6.push({label:nomeM, vends, rec});
+  }
+  drawBarChart('chart-mensal', meses6.map(m=>m.label), [{label:'Brownies', data:meses6.map(m=>m.vends), color:'#b87316'}]);
+
+  // Gráfico: sabores
+  const st = {brigadeiro:0, ninho:0, ninhoNutella:0};
+  filtradas.forEach(v=>{ SABORES.forEach(x=>{ st[x.id]+=(v.sabores?v.sabores[x.id]||0:0); }); });
+  drawPieChart('chart-sabores', SABORES.map(s=>s.label), SABORES.map(s=>st[s.id]), SABORES.map(s=>s.cor));
+
+  // Gráfico: receita vs custo vs lucro por mês
+  const finLabel = document.getElementById('rel-fin-label');
+  if(finLabel) finLabel.textContent = custo>0 ? '' : '(preencha o custo acima)';
+  if(custo > 0){
+    const dsFin = [
+      {label:'Receita', data:meses6.map(m=>m.rec), color:'#0d6e52'},
+      {label:'Custo',   data:meses6.map(m=>custo*m.vends), color:'#9a3b1c'},
+      {label:'Lucro',   data:meses6.map(m=>Math.max(0, m.rec - custo*m.vends)), color:'#1856a0'},
+    ];
+    drawBarChart('chart-financeiro', meses6.map(m=>m.label), dsFin, {money:true});
+  } else {
+    const cv = document.getElementById('chart-financeiro');
+    if(cv){ const ctx=cv.getContext('2d'); const W=cv.offsetWidth||320; cv.width=W; cv.height=180;
+      ctx.clearRect(0,0,W,180); ctx.fillStyle='#9c9484'; ctx.font='12px sans-serif'; ctx.textAlign='center';
+      ctx.fillText('Preencha o custo por brownie para ver este gráfico', W/2, 90); }
+  }
+
+  // Gráfico: visitas por dia da semana
+  const diasNomes = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  const diasCount = [0,0,0,0,0,0,0];
+  filtradas.forEach(v=>{ if(v.data){ const d=new Date(v.data+'T12:00:00'); diasCount[d.getDay()]++; } });
+  drawBarChart('chart-dias', diasNomes, [{label:'Visitas', data:diasCount, color:'#1856a0'}]);
+
+  // Ranking
+  const rankLabel = document.getElementById('rel-rank-label');
+  if(rankLabel) rankLabel.textContent = '('+label+')';
+  const rankData = clientes.map(c=>{
+    const cv = filterByPeriod(visitas.filter(v=>v.clienteId===c.id), relPeriod);
+    return {c, vendidos:cv.reduce((s,v)=>s+totalVendidosVisita(v),0), recebido:cv.reduce((s,v)=>s+(+v.recebido||0),0)};
+  }).filter(x=>x.vendidos>0).sort((a,b)=>b.vendidos-a.vendidos).slice(0,8);
+  const medals=['🥇','🥈','🥉'];
+  const rankEl = document.getElementById('rel-ranking');
+  rankEl.innerHTML = rankData.length===0
+    ? '<div class="empty" style="padding:1.5rem"><i class="ti ti-trophy"></i>Nenhuma venda no período.</div>'
+    : rankData.map((x,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:.55rem 0;border-bottom:.5px solid var(--border)">
+        <div style="width:22px;text-align:center;font-size:${i<3?16:13}px;flex-shrink:0">${i<3?medals[i]:i+1}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.c.nome}</div>
+          <div style="margin-top:3px;height:5px;background:var(--surface2);border-radius:20px;overflow:hidden">
+            <div style="height:100%;border-radius:20px;background:var(--amber);width:${Math.round((x.vendidos/(rankData[0].vendidos||1))*100)}%"></div>
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:13px;font-weight:600;color:var(--amber)">${x.vendidos} un.</div>
+          <div style="font-size:11px;color:var(--text3)">${fmtMoney(x.recebido)}</div>
+        </div>
+      </div>`).join('');
+
+  // Projeção do mês
+  const hoje = new Date();
+  const diaAtual = hoje.getDate();
+  const diasNoMes = new Date(hoje.getFullYear(), hoje.getMonth()+1, 0).getDate();
+  const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
+  const visitasMes = visitas.filter(v=>v.data&&v.data.startsWith(mesAtual));
+  const vendMes = visitasMes.reduce((s,v)=>s+totalVendidosVisita(v),0);
+  const recMes  = visitasMes.reduce((s,v)=>s+(+v.recebido||0),0);
+  const ritmoVend = diaAtual>0 ? vendMes/diaAtual : 0;
+  const ritmoRec  = diaAtual>0 ? recMes/diaAtual  : 0;
+  const projVend = Math.round(ritmoVend * diasNoMes);
+  const projRec  = ritmoRec * diasNoMes;
+  const projLucro = custo>0 ? projRec - custo*projVend : null;
+  const pctMes = Math.round((diaAtual/diasNoMes)*100);
+
+  const projEl = document.getElementById('rel-projecao');
+  projEl.innerHTML = `
+    <div style="margin-bottom:.85rem">
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:4px">
+        <span>Progresso do mês</span><span>${diaAtual} de ${diasNoMes} dias (${pctMes}%)</span>
+      </div>
+      <div style="height:8px;background:var(--surface2);border-radius:20px;overflow:hidden">
+        <div style="height:100%;border-radius:20px;background:var(--amber);width:${pctMes}%"></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:.85rem">
+      <div class="visit-stat"><div class="n" style="color:var(--amber)">${vendMes}</div><div class="l">vendidos até hoje</div></div>
+      <div class="visit-stat"><div class="n" style="color:var(--teal);font-size:14px">${fmtMoney(recMes)}</div><div class="l">recebido até hoje</div></div>
+      <div class="visit-stat"><div class="n" style="color:var(--blue)">${projVend}</div><div class="l">projeção brownies</div></div>
+      <div class="visit-stat"><div class="n" style="color:var(--teal);font-size:14px">${fmtMoney(projRec)}</div><div class="l">projeção receita</div></div>
+      ${projLucro!==null?`<div class="visit-stat" style="grid-column:1/-1"><div class="n" style="color:var(--amber);font-size:14px">${fmtMoney(projLucro)}</div><div class="l">projeção de lucro</div></div>`:''}
+    </div>
+    <div style="font-size:11px;color:var(--text3);text-align:center">Baseado no ritmo atual de ${ritmoVend.toFixed(1)} brownies/dia</div>
+  `;
 }
 
 loadData();
