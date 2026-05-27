@@ -317,8 +317,22 @@ input[readonly]{background:var(--surface2);opacity:.8}
       <div class="field"><label>Referência</label><input type="text" id="c-ref" placeholder="Próximo ao..."></div>
     </div>
     <div class="divider"></div>
+    <h3 style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:.75rem"><i class="ti ti-package" style="font-size:15px;vertical-align:-2px;margin-right:6px"></i>Estoque em comodato por sabor</h3>
+    <div class="sabores-grid" style="margin-bottom:.85rem">
+      <div class="sabor-card">
+        <div class="sabor-nome"><div class="sabor-dot" style="background:#6b3f10"></div>Brigadeiro</div>
+        <div class="field"><label>Quantidade</label><input type="number" id="c-est-brig" min="0" placeholder="0"></div>
+      </div>
+      <div class="sabor-card">
+        <div class="sabor-nome"><div class="sabor-dot" style="background:#c9a84c"></div>Ninho</div>
+        <div class="field"><label>Quantidade</label><input type="number" id="c-est-ninho" min="0" placeholder="0"></div>
+      </div>
+      <div class="sabor-card">
+        <div class="sabor-nome"><div class="sabor-dot" style="background:#7b3f8c"></div>Ninho c/ Nutella</div>
+        <div class="field"><label>Quantidade</label><input type="number" id="c-est-nn" min="0" placeholder="0"></div>
+      </div>
+    </div>
     <div class="row">
-      <div class="field"><label>Brownies em comodato</label><input type="number" id="c-estoque" min="0" placeholder="0"></div>
       <div class="field"><label>Preço de venda do cliente (R$)</label><input type="number" id="c-preco-venda" min="0" step="0.01" placeholder="Ex: 8,00" title="Quanto o cliente cobra pelo brownie"></div>
       <div class="field"><label>Dia preferencial</label>
         <select id="c-dia">
@@ -384,12 +398,21 @@ async function sbDelete(table, id){
 function dbToCliente(r){
   return {id:r.id,nome:r.nome,responsavel:r.responsavel||'',telefone:r.telefone||'',whatsapp:r.whatsapp||'',
     endereco:r.endereco||'',bairro:r.bairro||'',cidade:r.cidade||'',ref:r.ref||'',
-    estoque:r.estoque||0,obs:r.obs||'',status:r.status||'ativo',diaVisita:r.dia_visita||'',
+    estoque:r.estoque||0,
+    estoqueBrig:r.estoque_brigadeiro||0,
+    estoqueNinho:r.estoque_ninho||0,
+    estoqueNN:r.estoque_ninho_nutella||0,
+    obs:r.obs||'',status:r.status||'ativo',diaVisita:r.dia_visita||'',
     precoVenda:r.preco_venda||0,criadoEm:r.criado_em};
 }
 function clienteToDb(c){
+  const total=(c.estoqueBrig||0)+(c.estoqueNinho||0)+(c.estoqueNN||0);
   return {id:c.id,nome:c.nome,responsavel:c.responsavel,telefone:c.telefone,whatsapp:c.whatsapp,
-    endereco:c.endereco,bairro:c.bairro,cidade:c.cidade,ref:c.ref,estoque:c.estoque,
+    endereco:c.endereco,bairro:c.bairro,cidade:c.cidade,ref:c.ref,
+    estoque:total,
+    estoque_brigadeiro:c.estoqueBrig||0,
+    estoque_ninho:c.estoqueNinho||0,
+    estoque_ninho_nutella:c.estoqueNN||0,
     obs:c.obs,status:c.status,dia_visita:c.diaVisita,preco_venda:c.precoVenda||0};
 }
 function dbToVisita(r){
@@ -489,7 +512,7 @@ function saborPills(v){
 // ─── DASHBOARD ───────────────────────────────────────────────────
 function renderDashboard(){
   const ativos=clientes.filter(c=>c.status==='ativo');
-  const totalEstoque=ativos.reduce((s,c)=>s+(+c.estoque||0),0);
+  const totalEstoque=ativos.reduce((s,c)=>s+(c.estoqueBrig||0)+(c.estoqueNinho||0)+(c.estoqueNN||0),0);
   const filtradas=filterByPeriod(visitas,dashPeriod);
   const receitaPer=filtradas.reduce((s,v)=>s+(+v.recebido||0),0);
   const saldoAberto=filtradas.reduce((s,v)=>s+Math.max(0,(+v.valor||0)-(+v.recebido||0)),0);
@@ -607,7 +630,10 @@ function renderClientes(){
         ${c.diaVisita?`<span><i class="ti ti-calendar" style="font-size:13px"></i>${c.diaVisita}</span>`:''}
       </div>
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-        <span class="badge amber"><i class="ti ti-package" style="font-size:12px"></i>${+c.estoque||0} brownies</span>
+        <span class="badge amber"><i class="ti ti-package" style="font-size:12px"></i>${+c.estoque||0} total</span>
+        ${(c.estoqueBrig||0)>0?`<span class="badge amber" style="background:#f5ebe0;color:#6b3f10"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#6b3f10;margin-right:4px"></span>Brig: ${c.estoqueBrig}</span>`:''}
+        ${(c.estoqueNinho||0)>0?`<span class="badge amber" style="background:#fdf8e6;color:#8a6d10"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#c9a84c;margin-right:4px"></span>Ninho: ${c.estoqueNinho}</span>`:''}
+        ${(c.estoqueNN||0)>0?`<span class="badge amber" style="background:#f5eefa;color:#7b3f8c"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#7b3f8c;margin-right:4px"></span>N.Nutella: ${c.estoqueNN}</span>`:''}
         ${c.precoVenda>0?`<span class="badge teal"><i class="ti ti-tag" style="font-size:12px"></i>vende a ${fmtMoney(c.precoVenda)}</span>`:''}
         ${ult?`<span class="tag">Última visita: ${fmtDate(ult.data)}</span>`:'<span class="tag">Sem visitas</span>'}
         ${totalV>0?`<span class="tag">${totalV} vendidos</span>`:''}
@@ -639,7 +665,7 @@ function populateClientSelect(){
 
 // ─── MODAL CLIENTE ───────────────────────────────────────────────
 function openClientModal(c=null){
-  ['c-id','c-nome','c-responsavel','c-telefone','c-whatsapp','c-endereco','c-bairro','c-cidade','c-ref','c-estoque','c-preco-venda','c-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['c-id','c-nome','c-responsavel','c-telefone','c-whatsapp','c-endereco','c-bairro','c-cidade','c-ref','c-est-brig','c-est-ninho','c-est-nn','c-preco-venda','c-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('c-status').value='ativo';
   document.getElementById('c-dia').value='';
   document.getElementById('modal-title').textContent=c?'Editar cliente':'Novo cliente';
@@ -653,7 +679,9 @@ function openClientModal(c=null){
     document.getElementById('c-bairro').value=c.bairro||'';
     document.getElementById('c-cidade').value=c.cidade||'';
     document.getElementById('c-ref').value=c.ref||'';
-    document.getElementById('c-estoque').value=c.estoque||0;
+    document.getElementById('c-est-brig').value=c.estoqueBrig||0;
+    document.getElementById('c-est-ninho').value=c.estoqueNinho||0;
+    document.getElementById('c-est-nn').value=c.estoqueNN||0;
     document.getElementById('c-preco-venda').value=c.precoVenda||'';
     document.getElementById('c-obs').value=c.obs||'';
     document.getElementById('c-status').value=c.status||'ativo';
@@ -672,10 +700,13 @@ async function salvarCliente(){
     telefone:document.getElementById('c-telefone').value,whatsapp:document.getElementById('c-whatsapp').value,
     endereco:document.getElementById('c-endereco').value,bairro:document.getElementById('c-bairro').value,
     cidade:document.getElementById('c-cidade').value,ref:document.getElementById('c-ref').value,
-    estoque:+(document.getElementById('c-estoque').value)||0,
+    estoqueBrig:+(document.getElementById('c-est-brig').value)||0,
+    estoqueNinho:+(document.getElementById('c-est-ninho').value)||0,
+    estoqueNN:+(document.getElementById('c-est-nn').value)||0,
     precoVenda:+(document.getElementById('c-preco-venda').value)||0,
     obs:document.getElementById('c-obs').value,
     status:document.getElementById('c-status').value,diaVisita:document.getElementById('c-dia').value};
+  obj.estoque=(obj.estoqueBrig||0)+(obj.estoqueNinho||0)+(obj.estoqueNN||0);
   try {
     if(existingId){
       await sbUpdate('bc_clientes', existingId, clienteToDb(obj));
@@ -706,7 +737,14 @@ async function deleteCliente(id){
 // ─── NOVA VISITA ─────────────────────────────────────────────────
 function onClienteChange(){
   const c=clientes.find(x=>x.id===document.getElementById('v-cliente').value);
-  document.getElementById('v-estoque-antes').value=c?(+c.estoque||0):'';
+  const total=c?((c.estoqueBrig||0)+(c.estoqueNinho||0)+(c.estoqueNN||0)):0;
+  document.getElementById('v-estoque-antes').value=c?total:'';
+  // Pre-fill repostos hints with current per-flavor stock
+  if(c){
+    const bEl=document.getElementById('s-brig-v'); if(bEl&&!bEl.value) bEl.placeholder=`estoque: ${c.estoqueBrig||0}`;
+    const nEl=document.getElementById('s-ninho-v'); if(nEl&&!nEl.value) nEl.placeholder=`estoque: ${c.estoqueNinho||0}`;
+    const nnEl=document.getElementById('s-nn-v'); if(nnEl&&!nnEl.value) nnEl.placeholder=`estoque: ${c.estoqueNN||0}`;
+  }
   calcSabores();
 }
 function calcSabores(){
@@ -751,10 +789,20 @@ async function salvarVisita(){
     preco:obj.preco,obs:obj.obs,sabores:obj.sabores,sabores_repostos:obj.saboresRepostos};
   try {
     await sbInsert('bc_visitas', dbObj);
-    await sbUpdate('bc_clientes', clienteId, {estoque:estoqueDepois});
-    visitas.push(obj);
+    // Update per-flavor stock
     const cl=clientes.find(c=>c.id===clienteId);
-    if(cl)cl.estoque=estoqueDepois;
+    const newBrig = Math.max(0,(cl?cl.estoqueBrig:0)-bv+br);
+    const newNinho = Math.max(0,(cl?cl.estoqueNinho:0)-nv+nr);
+    const newNN    = Math.max(0,(cl?cl.estoqueNN:0)-nnv+nnr);
+    const newTotal = newBrig+newNinho+newNN;
+    await sbUpdate('bc_clientes', clienteId, {
+      estoque:newTotal,
+      estoque_brigadeiro:newBrig,
+      estoque_ninho:newNinho,
+      estoque_ninho_nutella:newNN
+    });
+    visitas.push(obj);
+    if(cl){cl.estoque=newTotal;cl.estoqueBrig=newBrig;cl.estoqueNinho=newNinho;cl.estoqueNN=newNN;}
     clearVisita(); toast('Visita registrada!'); showPage('dashboard');
   } catch(e){toast('Erro ao salvar visita: '+e.message,false);}
   setLoading('btn-salvar-visita',false);
@@ -837,7 +885,16 @@ function abrirPerfil(id){
       ${c.endereco?`<div class="perfil-info-item"><span class="lbl">Endereço</span><span class="val">${c.endereco}${c.bairro?', '+c.bairro:''}</span></div>`:''}
       ${c.ref?`<div class="perfil-info-item"><span class="lbl">Referência</span><span class="val">${c.ref}</span></div>`:''}
       ${c.diaVisita?`<div class="perfil-info-item"><span class="lbl">Dia preferencial</span><span class="val">${c.diaVisita}</span></div>`:''}
-      <div class="perfil-info-item"><span class="lbl">Estoque atual</span><span class="val" style="color:var(--amber);font-weight:600">${+c.estoque||0} brownies</span></div>
+      <div class="perfil-info-item"><span class="lbl">Estoque atual (total)</span><span class="val" style="color:var(--amber);font-weight:600">${+c.estoque||0} brownies</span></div>
+      ${(c.estoqueBrig||0)+(c.estoqueNinho||0)+(c.estoqueNN||0)>0?`
+      <div class="perfil-info-item" style="grid-column:1/-1">
+        <span class="lbl">Estoque por sabor</span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+          <span style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:8px;font-size:12px;background:#f5ebe0;border:.5px solid var(--border)"><span style="width:8px;height:8px;border-radius:50%;background:#6b3f10;display:inline-block"></span>Brigadeiro: <strong>${c.estoqueBrig||0}</strong></span>
+          <span style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:8px;font-size:12px;background:#fdf8e6;border:.5px solid var(--border)"><span style="width:8px;height:8px;border-radius:50%;background:#c9a84c;display:inline-block"></span>Ninho: <strong>${c.estoqueNinho||0}</strong></span>
+          <span style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:8px;font-size:12px;background:#f5eefa;border:.5px solid var(--border)"><span style="width:8px;height:8px;border-radius:50%;background:#7b3f8c;display:inline-block"></span>Ninho c/ Nutella: <strong>${c.estoqueNN||0}</strong></span>
+        </div>
+      </div>`:''}
       ${c.precoVenda>0?`<div class="perfil-info-item"><span class="lbl">Preço de venda</span><span class="val" style="color:var(--teal);font-weight:600">${fmtMoney(c.precoVenda)} / unidade</span></div>`:''}
       <div class="perfil-info-item"><span class="lbl">Última visita</span><span class="val">${ult?fmtDate(ult.data):'Nunca'}</span></div>
       ${c.obs?`<div class="perfil-info-item" style="grid-column:1/-1"><span class="lbl">Observações</span><span class="val">${c.obs}</span></div>`:''}
