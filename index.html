@@ -434,7 +434,8 @@ const SABORES = [
 
 // ─── SUPABASE HELPERS ────────────────────────────────────────────
 async function sbGet(table, query=''){
-  const r = await fetch(`${SB_URL}/rest/v1/${table}?${query}&order=criado_em.asc`, {headers:HEADERS});
+  const q = query ? `?${query}` : '';
+  const r = await fetch(`${SB_URL}/rest/v1/${table}${q}`, {headers:HEADERS});
   if(!r.ok) throw new Error(await r.text());
   return r.json();
 }
@@ -487,7 +488,7 @@ function clienteToDb(c, isNew=false){
   return db;
 }
 function dbToVisita(r){
-  return {id:r.id,clienteId:r.cliente_id,data:r.data,vendidos:r.vendidos||0,repostos:r.repostos||0,
+  return {id:r.id,clienteId:r.cliente_id,data:(r.data||'').slice(0,10),vendidos:r.vendidos||0,repostos:r.repostos||0,
     estoqueAntes:r.estoque_antes||0,estoqueDepois:r.estoque_depois||0,valor:r.valor||0,
     recebido:r.recebido||0,preco:r.preco||0,obs:r.obs||'',
     sabores:r.sabores||{brigadeiro:0,ninho:0,ninhoNutella:0},
@@ -501,8 +502,10 @@ async function loadData(){
     const [cRows, vRows] = await Promise.all([sbGet('bc_clientes'), sbGet('bc_visitas')]);
     clientes = cRows.map(dbToCliente);
     visitas  = vRows.map(dbToVisita);
+    console.log('Clientes carregados:', clientes.length, '| Visitas carregadas:', visitas.length);
   } catch(e){
     toast('Erro ao carregar dados: '+e.message, false);
+    console.error('loadData erro:', e);
   }
   document.getElementById('loading').style.display='none';
   document.getElementById('v-data').value = todayLocal();
@@ -588,6 +591,7 @@ function saborPills(v){
 
 // ─── DASHBOARD ───────────────────────────────────────────────────
 function renderDashboard(){
+  console.log('renderDashboard | visitas:', visitas.length, '| período:', dashPeriod);
   const ativos=clientes.filter(c=>c.status==='ativo');
   const totalEstoque=ativos.reduce((s,c)=>s+(c.estoqueBrig||0)+(c.estoqueNinho||0)+(c.estoqueNN||0),0);
   const filtradas=filterByPeriod(visitas,dashPeriod);
@@ -942,7 +946,7 @@ async function salvarVisita(){
   const vendidos=bv+nv+nnv, repostos=br+nr+nnr;
   const estoqueAntes=+(document.getElementById('v-estoque-antes').value)||0;
   const estoqueDepois=Math.max(0,estoqueAntes-vendidos+repostos);
-  const obj={id:uid(),clienteId,data,vendidos,repostos,estoqueAntes,estoqueDepois,
+  const obj={id:uid(),clienteId,data:data.slice(0,10),vendidos,repostos,estoqueAntes,estoqueDepois,
     valor:+(document.getElementById('v-valor').value)||0,
     recebido:+(document.getElementById('v-recebido').value)||0,
     preco:+(document.getElementById('v-preco').value)||0,
@@ -957,6 +961,7 @@ async function salvarVisita(){
   try {
     await sbInsert('bc_visitas', dbObj);
     visitas.push(obj); // adiciona imediatamente na memória
+    console.log('Visita salva! Total visitas na memória:', visitas.length, '| data:', obj.data, '| vendidos:', obj.vendidos, '| recebido:', obj.recebido);
   } catch(e){
     toast('Erro ao salvar visita: '+e.message, false);
     setLoading('btn-salvar-visita', false);
