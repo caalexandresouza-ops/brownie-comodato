@@ -952,25 +952,32 @@ async function salvarVisita(){
   const dbObj={id:obj.id,cliente_id:obj.clienteId,data:obj.data,vendidos:obj.vendidos,repostos:obj.repostos,
     estoque_antes:obj.estoqueAntes,estoque_depois:obj.estoqueDepois,valor:obj.valor,recebido:obj.recebido,
     preco:obj.preco,obs:obj.obs,sabores:obj.sabores,sabores_repostos:obj.saboresRepostos};
+
+  // 1. Salvar visita — se falhar, para aqui
   try {
     await sbInsert('bc_visitas', dbObj);
-    // Update per-flavor stock
+    visitas.push(obj); // adiciona imediatamente na memória
+  } catch(e){
+    toast('Erro ao salvar visita: '+e.message, false);
+    setLoading('btn-salvar-visita', false);
+    return;
+  }
+
+  // 2. Atualizar estoque do cliente — falha silenciosa, não bloqueia
+  try {
     const cl=clientes.find(c=>c.id===clienteId);
-    const newBrig = Math.max(0,(cl?cl.estoqueBrig:0)-bv+br);
+    const newBrig  = Math.max(0,(cl?cl.estoqueBrig:0)-bv+br);
     const newNinho = Math.max(0,(cl?cl.estoqueNinho:0)-nv+nr);
     const newNN    = Math.max(0,(cl?cl.estoqueNN:0)-nnv+nnr);
     const newTotal = newBrig+newNinho+newNN;
-    await sbUpdate('bc_clientes', clienteId, {
-      estoque:newTotal,
-      estoque_brigadeiro:newBrig,
-      estoque_ninho:newNinho,
-      estoque_ninho_nutella:newNN
-    });
-    visitas.push(obj);
+    await sbUpdate('bc_clientes', clienteId, {estoque:newTotal,estoque_brigadeiro:newBrig,estoque_ninho:newNinho,estoque_ninho_nutella:newNN});
     if(cl){cl.estoque=newTotal;cl.estoqueBrig=newBrig;cl.estoqueNinho=newNinho;cl.estoqueNN=newNN;}
-    clearVisita(); toast('Visita registrada!'); showPage('dashboard');
-  } catch(e){toast('Erro ao salvar visita: '+e.message,false);}
-  setLoading('btn-salvar-visita',false);
+  } catch(e){ console.warn('Aviso estoque:', e.message); }
+
+  toast('Visita registrada!');
+  clearVisita();
+  setLoading('btn-salvar-visita', false);
+  showPage('dashboard');
 }
 
 // ─── HISTÓRICO ───────────────────────────────────────────────────
