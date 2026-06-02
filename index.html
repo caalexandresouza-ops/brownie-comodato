@@ -467,7 +467,7 @@ function dbToCliente(r){
     inicialNN:r.inicial_ninho_nutella||0,
     dataInicio:r.data_inicio||null,
     obs:r.obs||'',status:r.status||'ativo',diaVisita:r.dia_visita||'',
-    precoVenda:r.preco_venda||0,criadoEm:r.criado_em};
+    precoVenda:r.preco_venda||0,precoRevenda:r.preco_revenda||0,criadoEm:r.criado_em};
 }
 function clienteToDb(c, isNew=false){
   const total=(c.estoqueBrig||0)+(c.estoqueNinho||0)+(c.estoqueNN||0);
@@ -477,7 +477,7 @@ function clienteToDb(c, isNew=false){
     estoque_brigadeiro:c.estoqueBrig||0,
     estoque_ninho:c.estoqueNinho||0,
     estoque_ninho_nutella:c.estoqueNN||0,
-    obs:c.obs,status:c.status,dia_visita:c.diaVisita,preco_venda:c.precoVenda||0};
+    obs:c.obs,status:c.status,dia_visita:c.diaVisita,preco_venda:c.precoVenda||0,preco_revenda:c.precoRevenda||0};
   // Inicial only saved once on creation
   if(isNew){
     db.inicial_brigadeiro = c.estoqueBrig||0;
