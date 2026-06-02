@@ -1033,6 +1033,7 @@ function renderVisitas(){
             ? `<span class="badge coral">saldo acum. ${fmtMoney(saldoAcum)}</span>`
             : `<span class="badge teal"><i class="ti ti-check" style="font-size:11px"></i> quitado</span>`}
           ${recebeuExtra?`<span class="badge blue" title="Recebeu mais do que o cobrado nessa visita (incluiu dívidas anteriores)"><i class="ti ti-arrow-bear-right" style="font-size:11px"></i> incluiu dívida anterior</span>`:''}
+          <button class="btn small" onclick="gerarComprovante('${v.id}')" title="Gerar comprovante"><i class="ti ti-file-text"></i></button>
           <button class="btn small danger" onclick="deleteVisita('${v.id}')"><i class="ti ti-trash"></i></button>
         </div>
       </div>
@@ -1047,6 +1048,239 @@ function renderVisitas(){
       ${v.obs?`<div style="font-size:12px;color:var(--text3);margin-top:.5rem;padding:.5rem;background:var(--surface2);border-radius:8px">${v.obs}</div>`:''}
     </div>`;
   }).join('');
+}
+
+function gerarComprovanteInicial(clienteId){
+  const c = clientes.find(x=>x.id===clienteId);
+  if(!c){ toast('Cliente não encontrado.',false); return; }
+  const inicialTotal=(c.inicialBrig||0)+(c.inicialNinho||0)+(c.inicialNN||0);
+  const endereco = c.endereco?c.endereco+(c.bairro?', '+c.bairro:''):'';
+  const saboresHTML = [
+    c.inicialBrig>0   ? `<tr><td>Brigadeiro</td><td>${c.inicialBrig} un.</td></tr>` : '',
+    c.inicialNinho>0  ? `<tr><td>Ninho</td><td>${c.inicialNinho} un.</td></tr>` : '',
+    c.inicialNN>0     ? `<tr><td>Ninho c/ Nutella</td><td>${c.inicialNN} un.</td></tr>` : '',
+  ].filter(Boolean).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Comprovante de Reposição Inicial</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Inter',sans-serif;background:#f5f0e8;color:#1a1814;padding:24px;max-width:480px;margin:0 auto}
+  .card{background:#fff;border-radius:16px;padding:24px;box-shadow:0 2px 16px rgba(0,0,0,.08)}
+  .header{text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px dashed #e8e4dc}
+  .logo{font-size:28px;margin-bottom:4px}
+  .titulo{font-size:20px;font-weight:700;color:#1856a0}
+  .subtitulo{font-size:13px;color:#9c9484;margin-top:2px}
+  .badge-inicial{display:inline-block;background:#e0ecff;color:#1856a0;font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;margin-bottom:12px}
+  .secao{margin-bottom:16px}
+  .secao-titulo{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:#9c9484;margin-bottom:8px}
+  .info-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0ece4;font-size:14px}
+  .info-row:last-child{border-bottom:none}
+  .info-val{font-weight:600}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  table td{padding:6px 0;border-bottom:1px solid #f0ece4}
+  table td:last-child{text-align:right;font-weight:600}
+  .total-box{background:#e0ecff;border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;margin-bottom:16px;font-size:15px;font-weight:700;color:#1856a0}
+  .aviso{background:#fdf8f0;border:1px solid #e8d5b0;border-radius:10px;padding:12px;font-size:13px;color:#6b4f1a;line-height:1.6;margin-bottom:16px}
+  .assinatura{margin-top:24px;padding-top:16px;border-top:1px solid #e8e4dc}
+  .linha-ass{border-bottom:1px solid #1a1814;height:32px;margin-bottom:6px}
+  .label-ass{font-size:11px;color:#9c9484;text-align:center}
+  .footer{text-align:center;margin-top:20px;padding-top:16px;border-top:2px dashed #e8e4dc;font-size:12px;color:#9c9484;line-height:1.8}
+  @media print{
+    body{background:#fff;padding:0}
+    .no-print{display:none}
+    .card{box-shadow:none}
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <div class="logo">🍫</div>
+    <div class="titulo">Reposição Inicial — Comodato</div>
+    <div class="subtitulo">${c.dataInicio ? fmtDate(c.dataInicio) : new Date().toLocaleDateString('pt-BR')}</div>
+  </div>
+
+  <div style="text-align:center;margin-bottom:16px">
+    <span class="badge-inicial">🚩 Primeira entrega</span>
+  </div>
+
+  <div class="secao">
+    <div class="secao-titulo">Cliente</div>
+    <div class="info-row"><span>Nome</span><span class="info-val">${c.nome}</span></div>
+    ${c.responsavel?`<div class="info-row"><span>Responsável</span><span class="info-val">${c.responsavel}</span></div>`:''}
+    ${endereco?`<div class="info-row"><span>Endereço</span><span class="info-val" style="text-align:right;max-width:240px">${endereco}</span></div>`:''}
+  </div>
+
+  <div class="secao">
+    <div class="secao-titulo">Brownies entregues por sabor</div>
+    <table>${saboresHTML}</table>
+  </div>
+
+  <div class="total-box">
+    <span>Total entregue</span>
+    <span>${inicialTotal} unidades</span>
+  </div>
+
+  <div class="aviso">
+    📋 <strong>Condições do comodato:</strong> Os brownies foram entregues em regime de comodato. 
+    O estabelecimento é responsável pelos produtos recebidos. 
+    O pagamento será realizado na próxima visita, referente às unidades vendidas.
+  </div>
+
+  <div class="assinatura">
+    <div class="linha-ass"></div>
+    <div class="label-ass">Assinatura do cliente: ${c.nome}${c.responsavel?' | '+c.responsavel:''}</div>
+  </div>
+
+  <div class="footer">
+    Obrigada pela parceria! 🍫<br>
+    Documento gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}
+  </div>
+</div>
+
+<div class="no-print" style="text-align:center;margin-top:16px;display:flex;gap:10px;justify-content:center">
+  <button onclick="window.print()" style="background:#1856a0;color:#fff;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer">🖨️ Imprimir / Salvar PDF</button>
+  <button onclick="window.close()" style="background:#e8e4dc;color:#1a1814;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer">Fechar</button>
+</div>
+</body>
+</html>`;
+
+  const win = window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
+}
+
+function gerarComprovante(visitaId){
+  const v = visitas.find(x=>x.id===visitaId);
+  if(!v){ toast('Visita não encontrada.',false); return; }
+  const cl = clientes.find(c=>c.id===v.clienteId);
+  const nome = cl?cl.nome:'Cliente';
+  const responsavel = cl&&cl.responsavel?' | '+cl.responsavel:'';
+  const endereco = cl&&cl.endereco?cl.endereco+(cl.bairro?', '+cl.bairro:''):'';
+  const saldo = Math.max(0,(+v.valor||0)-(+v.recebido||0));
+  const sabores = v.sabores||{};
+  const saboresHTML = [
+    sabores.brigadeiro>0 ? `<tr><td>Brigadeiro</td><td>${sabores.brigadeiro} un.</td></tr>` : '',
+    sabores.ninho>0      ? `<tr><td>Ninho</td><td>${sabores.ninho} un.</td></tr>` : '',
+    sabores.ninhoNutella>0 ? `<tr><td>Ninho c/ Nutella</td><td>${sabores.ninhoNutella} un.</td></tr>` : '',
+  ].filter(Boolean).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Comprovante de Visita</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Inter',sans-serif;background:#f5f0e8;color:#1a1814;padding:24px;max-width:480px;margin:0 auto}
+  .card{background:#fff;border-radius:16px;padding:24px;box-shadow:0 2px 16px rgba(0,0,0,.08)}
+  .header{text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px dashed #e8e4dc}
+  .logo{font-size:28px;margin-bottom:4px}
+  .titulo{font-size:20px;font-weight:700;color:#6b3f10}
+  .subtitulo{font-size:13px;color:#9c9484;margin-top:2px}
+  .secao{margin-bottom:16px}
+  .secao-titulo{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:#9c9484;margin-bottom:8px}
+  .info-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0ece4;font-size:14px}
+  .info-row:last-child{border-bottom:none}
+  .info-val{font-weight:600}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  table td{padding:6px 0;border-bottom:1px solid #f0ece4}
+  table td:last-child{text-align:right;font-weight:600}
+  .total-row{background:#fdf8f0;border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;margin-bottom:8px;font-size:15px;font-weight:600}
+  .total-row.recebido{color:#0d6e52}
+  .total-row.saldo{color:#c84b1f}
+  .total-row.quitado{color:#0d6e52}
+  .footer{text-align:center;margin-top:20px;padding-top:16px;border-top:2px dashed #e8e4dc;font-size:12px;color:#9c9484;line-height:1.8}
+  .assinatura{margin-top:24px;padding-top:16px;border-top:1px solid #e8e4dc}
+  .linha-ass{border-bottom:1px solid #1a1814;height:32px;margin-bottom:6px}
+  .label-ass{font-size:11px;color:#9c9484;text-align:center}
+  .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600}
+  .badge.quitado{background:#d4f0e8;color:#0d6e52}
+  .badge.saldo{background:#fde8e0;color:#c84b1f}
+  @media print{
+    body{background:#fff;padding:0}
+    .no-print{display:none}
+    .card{box-shadow:none}
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <div class="logo">🍫</div>
+    <div class="titulo">Comprovante de Visita</div>
+    <div class="subtitulo">${fmtDate(v.data)}</div>
+  </div>
+
+  <div class="secao">
+    <div class="secao-titulo">Cliente</div>
+    <div class="info-row"><span>Nome</span><span class="info-val">${nome}</span></div>
+    ${responsavel?`<div class="info-row"><span>Responsável</span><span class="info-val">${cl.responsavel}</span></div>`:''}
+    ${endereco?`<div class="info-row"><span>Endereço</span><span class="info-val" style="text-align:right;max-width:240px">${endereco}</span></div>`:''}
+  </div>
+
+  <div class="secao">
+    <div class="secao-titulo">Movimentação de estoque</div>
+    <div class="info-row"><span>Estoque anterior</span><span class="info-val">${+v.estoqueAntes||0} un.</span></div>
+    <div class="info-row"><span>Vendidos</span><span class="info-val" style="color:#c84b1f">−${totalVendidosVisita(v)} un.</span></div>
+    <div class="info-row"><span>Repostos</span><span class="info-val" style="color:#0d6e52">+${+v.repostos||0} un.</span></div>
+    <div class="info-row"><span>Estoque atual</span><span class="info-val">${+v.estoqueDepois||0} un.</span></div>
+  </div>
+
+  ${saboresHTML?`<div class="secao">
+    <div class="secao-titulo">Vendidos por sabor</div>
+    <table>${saboresHTML}</table>
+  </div>`:''}
+
+  <div class="secao">
+    <div class="secao-titulo">Financeiro</div>
+    ${v.preco>0?`<div class="info-row"><span>Preço por unidade</span><span class="info-val">${fmtMoney(+v.preco)}</span></div>`:''}
+    <div class="info-row"><span>Total cobrado</span><span class="info-val">${fmtMoney(+v.valor||0)}</span></div>
+  </div>
+
+  <div class="total-row recebido">
+    <span>Recebido nesta visita</span>
+    <span>${fmtMoney(+v.recebido||0)}</span>
+  </div>
+  ${saldo>0
+    ? `<div class="total-row saldo"><span>Saldo em aberto</span><span>${fmtMoney(saldo)}</span></div>`
+    : `<div class="total-row quitado"><span>✓ Pagamento quitado</span><span></span></div>`
+  }
+
+  ${v.obs?`<div class="secao" style="margin-top:12px">
+    <div class="secao-titulo">Observações</div>
+    <div style="font-size:13px;color:#6b6659;line-height:1.6">${v.obs}</div>
+  </div>`:''}
+
+  <div class="assinatura">
+    <div class="linha-ass"></div>
+    <div class="label-ass">Assinatura do cliente: ${nome}${responsavel}</div>
+  </div>
+
+  <div class="footer">
+    Obrigada pela parceria! 🍫<br>
+    Documento gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}
+  </div>
+</div>
+
+<div class="no-print" style="text-align:center;margin-top:16px;display:flex;gap:10px;justify-content:center">
+  <button onclick="window.print()" style="background:#6b3f10;color:#fff;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer">🖨️ Imprimir / Salvar PDF</button>
+  <button onclick="window.close()" style="background:#e8e4dc;color:#1a1814;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer">Fechar</button>
+</div>
+</body>
+</html>`;
+
+  const win = window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
 }
 
 async function deleteVisita(id){
@@ -1120,6 +1354,7 @@ function abrirPerfil(id){
               <span class="badge blue"><i class="ti ti-flag" style="font-size:11px"></i> Reposição inicial</span>
               <span style="font-size:12px;color:var(--text2)">${inicialTotal} brownies deixados</span>
             </div>
+            <button class="btn small" onclick="gerarComprovanteInicial('${c.id}')" title="Gerar comprovante"><i class="ti ti-file-text"></i></button>
           </div>
           <div class="tl-stats">
             <div class="tl-stat"><div class="n" style="color:var(--blue)">${inicialTotal}</div><div class="l">total inicial</div></div>
@@ -1152,6 +1387,7 @@ function abrirPerfil(id){
                   ?`<span class="badge coral">saldo acum. ${fmtMoney(sdAcum)}</span>`
                   :'<span class="badge teal"><i class="ti ti-check" style="font-size:11px"></i> quitado</span>'}
                 ${recebeuExtra?`<span class="badge blue" title="Recebeu mais do que o cobrado — inclui dívida anterior"><i class="ti ti-arrow-bear-right" style="font-size:11px"></i> incluiu dívida anterior</span>`:''}
+                <button class="btn small" onclick="gerarComprovante('${v.id}')" title="Gerar comprovante"><i class="ti ti-file-text"></i></button>
                 <button class="btn small danger" onclick="deleteVisitaPerfil('${v.id}','${c.id}')"><i class="ti ti-trash"></i></button>
               </div>
             </div>
