@@ -647,21 +647,100 @@ function renderDashboard(){
   const st={brigadeiro:0,ninho:0,ninhoNutella:0};
   filtradas.forEach(v=>{SABORES.forEach(x=>{st[x.id]+=(v.sabores?v.sabores[x.id]||0:0);});});
   renderSaborBar('dash-sabores-bar',st);
-  // Rota semana
-  const sw=getWeekStart();
-  const routeEl=document.getElementById('route-list');
+  // Rota semana — só clientes com visita de hoje em diante nesta semana
+  const sw = getWeekStart();
+  const se = getWeekEnd();
+  const routeEl = document.getElementById('route-list');
+  const hoje2 = new Date();
+  const diaHoje = hoje2.getDay(); // 0=Dom, 1=Seg ... 6=Sáb
+
+  const diasMap = {
+    'segunda':1,'terça':2,'terca':2,'quarta':3,'quinta':4,
+    'sexta':5,'sábado':6,'sabado':6,'domingo':0
+  };
+  const diasNomeCurto = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  const diasNomeCompleto = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+
+  // Ordenar dias restantes da semana (hoje até sábado, depois domingo)
+  const diasRestantes = [];
+  for(let i=0; i<=6; i++){
+    const d = (diaHoje + i) % 7;
+    diasRestantes.push(d);
+  }
+
+  // Agrupar clientes por dia
+  const semDia = []; // clientes sem dia definido
+  const porDia = {}; // dia → clientes
+
+  ativos.forEach(c=>{
+    const nomeDia = (c.diaVisita||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    const numDia = diasMap[nomeDia];
+    if(numDia === undefined){
+      semDia.push(c);
+    } else {
+      if(!porDia[numDia]) porDia[numDia] = [];
+      porDia[numDia].push(c);
+    }
+  });
+
   if(ativos.length===0){
     routeEl.innerHTML='<div class="empty" style="padding:1.5rem"><i class="ti ti-building-store"></i>Nenhum cliente ativo.</div>';
   } else {
-    routeEl.innerHTML=ativos.map(c=>{
-      const visitou=visitas.some(v=>v.clienteId===c.id&&v.data>=sw);
-      return `<div class="route-card ${visitou?'done':''}">
-        <div class="check ${visitou?'checked':''}">${visitou?'<i class="ti ti-check" style="font-size:12px"></i>':''}</div>
-        <div style="flex:1"><div style="font-size:13px;font-weight:500">${c.nome}</div>
-        <div style="font-size:11px;color:var(--text3)">${c.bairro||''}${c.diaVisita?' · '+c.diaVisita:''}</div></div>
-        <button class="btn small" onclick="regVisita('${c.id}')"><i class="ti ti-plus"></i></button>
+    let html = '';
+    let temAlgum = false;
+
+    diasRestantes.forEach(numDia=>{
+      const clientesDia = porDia[numDia];
+      if(!clientesDia || clientesDia.length===0) return;
+      temAlgum = true;
+      const ehHoje = numDia === diaHoje;
+      const nomeDia = diasNomeCompleto[numDia];
+
+      html += `<div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+        color:${ehHoje?'var(--teal)':'var(--text3)'};margin:${html?'10px':'0'} 0 6px;
+        display:flex;align-items:center;gap:6px">
+        ${ehHoje?'<i class="ti ti-calendar-event" style="font-size:13px"></i>':'<i class="ti ti-calendar" style="font-size:12px"></i>'}
+        ${nomeDia}${ehHoje?' — Hoje':''}
       </div>`;
-    }).join('');
+
+      clientesDia.forEach(c=>{
+        const visitou = visitas.some(v=>v.clienteId===c.id&&v.data>=sw&&v.data<=se);
+        html += `<div class="route-card ${visitou?'done':''}">
+          <div class="check ${visitou?'checked':''}">${visitou?'<i class="ti ti-check" style="font-size:12px"></i>':''}</div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:500">${c.nome}</div>
+            <div style="font-size:11px;color:var(--text3)">${c.bairro||''}</div>
+          </div>
+          <button class="btn small" onclick="regVisita('${c.id}')"><i class="ti ti-plus"></i></button>
+        </div>`;
+      });
+    });
+
+    // Clientes sem dia definido
+    if(semDia.length>0){
+      temAlgum = true;
+      html += `<div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+        color:var(--text3);margin:${html?'10px':'0'} 0 6px">
+        <i class="ti ti-help-circle" style="font-size:12px"></i> Sem dia fixo
+      </div>`;
+      semDia.forEach(c=>{
+        const visitou = visitas.some(v=>v.clienteId===c.id&&v.data>=sw&&v.data<=se);
+        html += `<div class="route-card ${visitou?'done':''}">
+          <div class="check ${visitou?'checked':''}">${visitou?'<i class="ti ti-check" style="font-size:12px"></i>':''}</div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:500">${c.nome}</div>
+            <div style="font-size:11px;color:var(--text3)">${c.bairro||''}</div>
+          </div>
+          <button class="btn small" onclick="regVisita('${c.id}')"><i class="ti ti-plus"></i></button>
+        </div>`;
+      });
+    }
+
+    if(!temAlgum){
+      html = '<div class="empty" style="padding:1.5rem"><i class="ti ti-circle-check"></i>Nenhuma visita restante esta semana!</div>';
+    }
+
+    routeEl.innerHTML = html;
   }
   // Top 10
   document.getElementById('top10-period-label').textContent='('+periodLabels[dashPeriod]+')';
