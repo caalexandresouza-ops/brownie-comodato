@@ -620,9 +620,20 @@ function renderDashboard(){
   const ativos=clientes.filter(c=>c.status==='ativo');
   const totalEstoque=ativos.reduce((s,c)=>s+(c.estoqueBrig||0)+(c.estoqueNinho||0)+(c.estoqueNN||0),0);
   const filtradas=filterByPeriod(visitas,dashPeriod);
-  const receitaPer=filtradas.reduce((s,v)=>s+(+v.recebido||0),0);
-  const saldoAberto=filtradas.reduce((s,v)=>s+Math.max(0,(+v.valor||0)-(+v.recebido||0)),0);
-  const totalVend=filtradas.reduce((s,v)=>s+totalVendidosVisita(v),0);
+
+  // Reposições iniciais no período — soma receita e saldo, mas NÃO conta como vendidos
+  const range=getPeriodRange(dashPeriod);
+  const iniciaisNoPeriodo=clientes.filter(c=>{
+    if(!c.dataInicio) return false;
+    if(!range) return true;
+    return c.dataInicio>=range.from && c.dataInicio<=range.to;
+  });
+  const receitaInicial=iniciaisNoPeriodo.reduce((s,c)=>s+(+c.inicialRecebido||0),0);
+  const saldoInicial=iniciaisNoPeriodo.reduce((s,c)=>s+Math.max(0,(+c.inicialValor||0)-(+c.inicialRecebido||0)),0);
+
+  const receitaPer = filtradas.reduce((s,v)=>s+(+v.recebido||0),0) + receitaInicial;
+  const saldoAberto = filtradas.reduce((s,v)=>s+Math.max(0,(+v.valor||0)-(+v.recebido||0)),0) + saldoInicial;
+  const totalVend  = filtradas.reduce((s,v)=>s+totalVendidosVisita(v),0); // vendidos = só de visitas
   document.getElementById('dash-period-label').textContent='('+periodLabels[dashPeriod]+')';
   document.getElementById('dash-metrics').innerHTML=`
     <div class="metric amber"><div class="val">${ativos.length}</div><div class="lbl">Clientes ativos</div></div>
@@ -1618,13 +1629,36 @@ function renderRelatorios(){
   carregarCusto();
   const filtradas = filterByPeriod(visitas, relPeriod);
   const totalVend = filtradas.reduce((s,v)=>s+totalVendidosVisita(v),0);
-  const receita   = filtradas.reduce((s,v)=>s+(+v.recebido||0),0);
-  const custoTotal= filtradas.reduce((s,v)=>s+custoVisita(v),0);
-  const lucro     = receita - custoTotal;
-  const margem    = receita > 0 ? Math.round((lucro/receita)*100) : 0;
+
+  // Reposições iniciais dentro do período
+  const rangeRel = getPeriodRange(relPeriod);
+  const iniciaisRel = clientes.filter(c=>{
+    if(!c.dataInicio) return false;
+    if(!rangeRel) return true;
+    return c.dataInicio>=rangeRel.from && c.dataInicio<=rangeRel.to;
+  });
+
+  // Receita inicial = o que foi recebido na primeira visita
+  const receitaInicial = iniciaisRel.reduce((s,c)=>s+(+c.inicialRecebido||0),0);
+
+  // Custo inicial = só para clientes que JÁ receberam pagamento antecipado
+  // Custo proporcional à quantidade inicial entregue × custo por brownie
+  const custoInicial = iniciaisRel.reduce((s,c)=>{
+    if(!(+c.inicialRecebido > 0)) return s; // só conta se houve pagamento
+    const qtd = (c.inicialBrig||0)+(c.inicialNinho||0)+(c.inicialNN||0);
+    return s + qtd * (custos.brigadeiro||0);
+  },0);
+
+  // Saldo inicial = cobrado - recebido (se não quitou tudo)
+  const saldoInicialRel = iniciaisRel.reduce((s,c)=>s+Math.max(0,(+c.inicialValor||0)-(+c.inicialRecebido||0)),0);
+
+  const receita    = filtradas.reduce((s,v)=>s+(+v.recebido||0),0) + receitaInicial;
+  const custoTotal = filtradas.reduce((s,v)=>s+custoVisita(v),0) + custoInicial;
+  const lucro      = receita - custoTotal;
+  const margem     = receita > 0 ? Math.round((lucro/receita)*100) : 0;
   const ticketMedio    = filtradas.length > 0 ? receita / filtradas.length : 0;
   const mediaPorVisita = filtradas.length > 0 ? totalVend / filtradas.length : 0;
-  const saldoAberto    = filtradas.reduce((s,v)=>s+Math.max(0,(+v.valor||0)-(+v.recebido||0)),0);
+  const saldoAberto    = filtradas.reduce((s,v)=>s+Math.max(0,(+v.valor||0)-(+v.recebido||0)),0) + saldoInicialRel;
   const comCusto = temCusto();
   const label = periodLabels[relPeriod] || '';
 
@@ -1640,14 +1674,25 @@ function renderRelatorios(){
   `;
 
   // Gráfico: vendas por mês (últimos 6 meses)
+  // Função auxiliar: receita+custo inicial de um mês
+  function inicialDoMes(key){
+    const rec = clientes.filter(c=>c.dataInicio&&c.dataInicio.startsWith(key)&&(+c.inicialRecebido>0))
+      .reduce((s,c)=>s+(+c.inicialRecebido||0),0);
+    const custo = clientes.filter(c=>c.dataInicio&&c.dataInicio.startsWith(key)&&(+c.inicialRecebido>0))
+      .reduce((s,c)=>s+((c.inicialBrig||0)+(c.inicialNinho||0)+(c.inicialNN||0))*(custos.brigadeiro||0),0);
+    return {rec, custo};
+  }
+
   const meses6 = [];
   for(let i=5;i>=0;i--){
     const d = new Date(); d.setDate(1); d.setMonth(d.getMonth()-i);
     const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
     const nomeM = d.toLocaleDateString('pt-BR',{month:'short'}).replace('.','');
     const vends = visitas.filter(v=>v.data&&v.data.startsWith(key)).reduce((s,v)=>s+totalVendidosVisita(v),0);
-    const rec   = visitas.filter(v=>v.data&&v.data.startsWith(key)).reduce((s,v)=>s+(+v.recebido||0),0);
-    meses6.push({label:nomeM, key, vends, rec});
+    const recVisitas = visitas.filter(v=>v.data&&v.data.startsWith(key)).reduce((s,v)=>s+(+v.recebido||0),0);
+    const {rec: recIni, custo: custoIni} = inicialDoMes(key);
+    const rec = recVisitas + recIni;
+    meses6.push({label:nomeM, key, vends, rec, recIni, custoIni});
   }
   drawBarChart('chart-mensal', meses6.map(m=>m.label), [{label:'Brownies', data:meses6.map(m=>m.vends), color:'#b87316'}]);
 
@@ -1656,21 +1701,21 @@ function renderRelatorios(){
   filtradas.forEach(v=>{ SABORES.forEach(x=>{ st[x.id]+=(v.sabores?v.sabores[x.id]||0:0); }); });
   drawPieChart('chart-sabores', SABORES.map(s=>s.label), SABORES.map(s=>st[s.id]), SABORES.map(s=>s.cor));
 
-  // Gráfico: receita vs custo vs lucro por mês
+  // Gráfico: receita vs custo vs lucro por mês (inclui iniciais)
   const finLabel = document.getElementById('rel-fin-label');
   if(finLabel) finLabel.textContent = comCusto ? '' : '(preencha os custos acima)';
   if(comCusto){
     const dsFin = [
       {label:'Receita', data:meses6.map(m=>m.rec), color:'#0d6e52'},
-      {label:'Custo',   data:meses6.map(m=>{
+      {label:'Custo', data:meses6.map(m=>{
         const vMes=visitas.filter(v=>v.data&&v.data.startsWith(m.key));
-        return vMes.reduce((s,v)=>s+custoVisita(v),0);
+        return vMes.reduce((s,v)=>s+custoVisita(v),0) + m.custoIni;
       }), color:'#9a3b1c'},
-      {label:'Lucro',   data:meses6.map(m=>{
+      {label:'Lucro', data:meses6.map(m=>{
         const vMes=visitas.filter(v=>v.data&&v.data.startsWith(m.key));
-        const r=vMes.reduce((s,v)=>s+(+v.recebido||0),0);
-        const c=vMes.reduce((s,v)=>s+custoVisita(v),0);
-        return Math.max(0,r-c);
+        const r = vMes.reduce((s,v)=>s+(+v.recebido||0),0) + m.recIni;
+        const c = vMes.reduce((s,v)=>s+custoVisita(v),0) + m.custoIni;
+        return Math.max(0, r-c);
       }), color:'#1856a0'},
     ];
     drawBarChart('chart-financeiro', meses6.map(m=>m.label), dsFin, {money:true});
@@ -1692,8 +1737,9 @@ function renderRelatorios(){
   if(rankLabel) rankLabel.textContent = '('+label+')';
   const rankData = clientes.map(c=>{
     const cv = filterByPeriod(visitas.filter(v=>v.clienteId===c.id), relPeriod);
-    return {c, vendidos:cv.reduce((s,v)=>s+totalVendidosVisita(v),0), recebido:cv.reduce((s,v)=>s+(+v.recebido||0),0)};
-  }).filter(x=>x.vendidos>0).sort((a,b)=>b.vendidos-a.vendidos).slice(0,8);
+    const recIniC = rangeRel&&c.dataInicio&&c.dataInicio>=rangeRel.from&&c.dataInicio<=rangeRel.to ? (+c.inicialRecebido||0) : 0;
+    return {c, vendidos:cv.reduce((s,v)=>s+totalVendidosVisita(v),0), recebido:cv.reduce((s,v)=>s+(+v.recebido||0),0)+recIniC};
+  }).filter(x=>x.vendidos>0||x.recebido>0).sort((a,b)=>b.recebido-a.recebido).slice(0,8);
   const medals=['🥇','🥈','🥉'];
   const rankEl = document.getElementById('rel-ranking');
   rankEl.innerHTML = rankData.length===0
@@ -1703,7 +1749,7 @@ function renderRelatorios(){
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.c.nome}</div>
           <div style="margin-top:3px;height:5px;background:var(--surface2);border-radius:20px;overflow:hidden">
-            <div style="height:100%;border-radius:20px;background:var(--amber);width:${Math.round((x.vendidos/(rankData[0].vendidos||1))*100)}%"></div>
+            <div style="height:100%;border-radius:20px;background:var(--amber);width:${Math.round((x.recebido/(rankData[0].recebido||1))*100)}%"></div>
           </div>
         </div>
         <div style="text-align:right;flex-shrink:0">
@@ -1712,22 +1758,23 @@ function renderRelatorios(){
         </div>
       </div>`).join('');
 
-  // Projeção do mês
+  // Projeção do mês (inclui iniciais do mês atual)
   const hoje = new Date();
   const diaAtual = hoje.getDate();
   const diasNoMes = new Date(hoje.getFullYear(), hoje.getMonth()+1, 0).getDate();
   const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
   const visitasMes = visitas.filter(v=>v.data&&v.data.startsWith(mesAtual));
-  const vendMes = visitasMes.reduce((s,v)=>s+totalVendidosVisita(v),0);
-  const recMes  = visitasMes.reduce((s,v)=>s+(+v.recebido||0),0);
-  const custoMes  = visitasMes.reduce((s,v)=>s+custoVisita(v),0);
-  const ritmoVend = diaAtual>0 ? vendMes/diaAtual : 0;
-  const ritmoRec  = diaAtual>0 ? recMes/diaAtual  : 0;
-  const ritmoCusto= diaAtual>0 ? custoMes/diaAtual : 0;
-  const projVend  = Math.round(ritmoVend * diasNoMes);
-  const projRec   = ritmoRec * diasNoMes;
-  const projCusto = ritmoCusto * diasNoMes;
-  const projLucro = comCusto ? projRec - projCusto : null;
+  const {rec: recIniMes, custo: custoIniMes} = inicialDoMes(mesAtual);
+  const vendMes  = visitasMes.reduce((s,v)=>s+totalVendidosVisita(v),0);
+  const recMes   = visitasMes.reduce((s,v)=>s+(+v.recebido||0),0) + recIniMes;
+  const custoMes = visitasMes.reduce((s,v)=>s+custoVisita(v),0) + custoIniMes;
+  const ritmoVend  = diaAtual>0 ? vendMes/diaAtual : 0;
+  const ritmoRec   = diaAtual>0 ? recMes/diaAtual  : 0;
+  const ritmoCusto = diaAtual>0 ? custoMes/diaAtual : 0;
+  const projVend   = Math.round(ritmoVend * diasNoMes);
+  const projRec    = ritmoRec * diasNoMes;
+  const projCusto  = ritmoCusto * diasNoMes;
+  const projLucro  = comCusto ? projRec - projCusto : null;
   const pctMes = Math.round((diaAtual/diasNoMes)*100);
 
   const projEl = document.getElementById('rel-projecao');
