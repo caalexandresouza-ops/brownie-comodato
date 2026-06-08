@@ -361,35 +361,19 @@ input[readonly]{background:var(--surface2);opacity:.8}
     <div class="sabores-grid" style="margin-bottom:.85rem">
       <div class="sabor-card">
         <div class="sabor-nome"><div class="sabor-dot" style="background:#6b3f10"></div>Brigadeiro</div>
-        <div class="field"><label>Qtd inicial</label><input type="number" id="c-ini-brig" min="0" placeholder="0" oninput="syncEstoqueInicial();calcInicialValor()"></div>
+        <div class="field"><label>Qtd inicial</label><input type="number" id="c-ini-brig" min="0" placeholder="0" oninput="syncEstoqueInicial()"></div>
       </div>
       <div class="sabor-card">
         <div class="sabor-nome"><div class="sabor-dot" style="background:#c9a84c"></div>Ninho</div>
-        <div class="field"><label>Qtd inicial</label><input type="number" id="c-ini-ninho" min="0" placeholder="0" oninput="syncEstoqueInicial();calcInicialValor()"></div>
+        <div class="field"><label>Qtd inicial</label><input type="number" id="c-ini-ninho" min="0" placeholder="0" oninput="syncEstoqueInicial()"></div>
       </div>
       <div class="sabor-card">
         <div class="sabor-nome"><div class="sabor-dot" style="background:#7b3f8c"></div>Ninho c/ Nutella</div>
-        <div class="field"><label>Qtd inicial</label><input type="number" id="c-ini-nn" min="0" placeholder="0" oninput="syncEstoqueInicial();calcInicialValor()"></div>
+        <div class="field"><label>Qtd inicial</label><input type="number" id="c-ini-nn" min="0" placeholder="0" oninput="syncEstoqueInicial()"></div>
       </div>
     </div>
 
-    <!-- Pagamento na primeira visita -->
-    <div style="background:var(--surface2);border-radius:var(--radius);padding:.85rem;margin-bottom:.85rem">
-      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:.65rem;display:flex;align-items:center;gap:6px">
-        <i class="ti ti-cash"></i> Pagamento na primeira visita <span style="font-weight:400;color:var(--text3)">(opcional)</span>
-      </div>
-      <div class="row">
-        <div class="field">
-          <label>Valor cobrado (R$)</label>
-          <input type="number" id="c-ini-valor" min="0" step="0.01" placeholder="0,00" oninput="calcInicialSaldo()">
-        </div>
-        <div class="field">
-          <label>Valor recebido (R$)</label>
-          <input type="number" id="c-ini-recebido" min="0" step="0.01" placeholder="0,00" oninput="calcInicialSaldo()">
-        </div>
-      </div>
-      <div id="ini-saldo-info" style="font-size:12px;color:var(--text3);margin-top:4px"></div>
-    </div>
+
     <div id="section-estoque-atual">
     <div class="divider"></div>
     <h3 style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:.4rem"><i class="ti ti-package" style="font-size:15px;vertical-align:-2px;margin-right:6px"></i>Estoque atual em comodato <span style="font-size:11px;font-weight:400;color:var(--text3)">(edite se o estoque atual for diferente do inicial)</span></h3>
@@ -486,7 +470,6 @@ function dbToCliente(r){
     dataInicio:r.data_inicio||null,
     obs:r.obs||'',status:r.status||'ativo',diaVisita:r.dia_visita||'',
     precoVenda:r.preco_venda||0,precoRevenda:r.preco_revenda||0,
-    inicialValor:r.inicial_valor||0,inicialRecebido:r.inicial_recebido||0,
     criadoEm:r.criado_em};
 }
 function clienteToDb(c, isNew=false){
@@ -498,7 +481,7 @@ function clienteToDb(c, isNew=false){
     estoque_ninho:c.estoqueNinho||0,
     estoque_ninho_nutella:c.estoqueNN||0,
     obs:c.obs,status:c.status,dia_visita:c.diaVisita,preco_venda:c.precoVenda||0,preco_revenda:c.precoRevenda||0,
-    inicial_valor:c.inicialValor||0,inicial_recebido:c.inicialRecebido||0};
+};
   // Inicial only saved once on creation
   if(isNew){
     db.inicial_brigadeiro = c.estoqueBrig||0;
@@ -621,19 +604,9 @@ function renderDashboard(){
   const totalEstoque=ativos.reduce((s,c)=>s+(c.estoqueBrig||0)+(c.estoqueNinho||0)+(c.estoqueNN||0),0);
   const filtradas=filterByPeriod(visitas,dashPeriod);
 
-  // Reposições iniciais no período — soma receita e saldo, mas NÃO conta como vendidos
-  const range=getPeriodRange(dashPeriod);
-  const iniciaisNoPeriodo=clientes.filter(c=>{
-    if(!c.dataInicio) return false;
-    if(!range) return true;
-    return c.dataInicio>=range.from && c.dataInicio<=range.to;
-  });
-  const receitaInicial=iniciaisNoPeriodo.reduce((s,c)=>s+(+c.inicialRecebido||0),0);
-  const saldoInicial=iniciaisNoPeriodo.reduce((s,c)=>s+Math.max(0,(+c.inicialValor||0)-(+c.inicialRecebido||0)),0);
-
-  const receitaPer = filtradas.reduce((s,v)=>s+(+v.recebido||0),0) + receitaInicial;
-  const saldoAberto = filtradas.reduce((s,v)=>s+Math.max(0,(+v.valor||0)-(+v.recebido||0)),0) + saldoInicial;
-  const totalVend  = filtradas.reduce((s,v)=>s+totalVendidosVisita(v),0); // vendidos = só de visitas
+  const receitaPer = filtradas.reduce((s,v)=>s+(+v.recebido||0),0);
+  const saldoAberto = filtradas.reduce((s,v)=>s+Math.max(0,(+v.valor||0)-(+v.recebido||0)),0);
+  const totalVend = filtradas.reduce((s,v)=>s+totalVendidosVisita(v),0);
   document.getElementById('dash-period-label').textContent='('+periodLabels[dashPeriod]+')';
   document.getElementById('dash-metrics').innerHTML=`
     <div class="metric amber"><div class="val">${ativos.length}</div><div class="lbl">Clientes ativos</div></div>
@@ -862,25 +835,6 @@ function populateClientSelect(){
 
 // ─── MODAL CLIENTE ───────────────────────────────────────────────
 // Quando cliente é NOVO, sincroniza inicial → estoque atual automaticamente
-function calcInicialValor(){
-  const preco = +(document.getElementById('c-preco-venda').value)||0;
-  const total = (+(document.getElementById('c-ini-brig').value)||0)
-              + (+(document.getElementById('c-ini-ninho').value)||0)
-              + (+(document.getElementById('c-ini-nn').value)||0);
-  if(preco>0 && total>0){
-    document.getElementById('c-ini-valor').value=(preco*total).toFixed(2);
-    calcInicialSaldo();
-  }
-}
-function calcInicialSaldo(){
-  const val = +(document.getElementById('c-ini-valor').value)||0;
-  const rec = +(document.getElementById('c-ini-recebido').value)||0;
-  const el  = document.getElementById('ini-saldo-info');
-  if(!el) return;
-  if(val>0 && rec>=val) el.innerHTML='<span style="color:var(--teal)">✓ Pagamento quitado nesta visita</span>';
-  else if(val>0 && rec>0) el.innerHTML=`<span style="color:var(--coral)">Saldo em aberto: ${fmtMoney(val-rec)}</span>`;
-  else el.innerHTML='';
-}
 function syncEstoqueInicial(){
   const isNew = !document.getElementById('c-id').value;
   if(!isNew) return; // edição: não toca no estoque atual
@@ -895,7 +849,7 @@ function syncEstoqueInicial(){
 function openClientModal(c=null){
   ['c-id','c-nome','c-responsavel','c-telefone','c-whatsapp','c-endereco','c-bairro','c-cidade','c-ref',
    'c-est-brig','c-est-ninho','c-est-nn','c-ini-brig','c-ini-ninho','c-ini-nn','c-data-inicio',
-   'c-preco-venda','c-preco-revenda','c-ini-valor','c-ini-recebido','c-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+   'c-preco-venda','c-preco-revenda','c-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('c-status').value='ativo';
   document.getElementById('c-dia').value='';
   document.getElementById('modal-title').textContent=c?'Editar cliente':'Novo cliente';
@@ -922,8 +876,6 @@ function openClientModal(c=null){
     document.getElementById('c-ini-ninho').value=c.inicialNinho||0;
     document.getElementById('c-ini-nn').value=c.inicialNN||0;
     document.getElementById('c-data-inicio').value=c.dataInicio||'';
-    document.getElementById('c-ini-valor').value=c.inicialValor||'';
-    document.getElementById('c-ini-recebido').value=c.inicialRecebido||'';
     document.getElementById('c-preco-venda').value=c.precoVenda||'';
     document.getElementById('c-preco-revenda').value=c.precoRevenda||'';
     document.getElementById('c-obs').value=c.obs||'';
@@ -952,8 +904,6 @@ async function salvarCliente(){
     inicialNinho:+(document.getElementById('c-ini-ninho').value)||0,
     inicialNN:+(document.getElementById('c-ini-nn').value)||0,
     dataInicio:document.getElementById('c-data-inicio').value||todayLocal(),
-    inicialValor:+(document.getElementById('c-ini-valor').value)||0,
-    inicialRecebido:+(document.getElementById('c-ini-recebido').value)||0,
     precoVenda:+(document.getElementById('c-preco-venda').value)||0,
     precoRevenda:+(document.getElementById('c-preco-revenda').value)||0,
     obs:document.getElementById('c-obs').value,
@@ -1487,7 +1437,6 @@ function abrirPerfil(id){
             <div style="font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px">
               <span class="badge blue"><i class="ti ti-flag" style="font-size:11px"></i> Reposição inicial</span>
               <span style="font-size:12px;color:var(--text2)">${inicialTotal} brownies deixados</span>
-              ${c.inicialValor>0?`<span class="badge ${c.inicialRecebido>=c.inicialValor?'teal':'coral'}">${c.inicialRecebido>=c.inicialValor?'✓ Quitado':'Saldo: '+fmtMoney(c.inicialValor-c.inicialRecebido)}</span>`:''}
             </div>
             <button class="btn small" onclick="gerarComprovanteInicial('${c.id}')" title="Gerar comprovante"><i class="ti ti-file-text"></i></button>
           </div>
@@ -1709,35 +1658,14 @@ function renderRelatorios(){
   const filtradas = filterByPeriod(visitas, relPeriod);
   const totalVend = filtradas.reduce((s,v)=>s+totalVendidosVisita(v),0);
 
-  // Reposições iniciais dentro do período
   const rangeRel = getPeriodRange(relPeriod);
-  const iniciaisRel = clientes.filter(c=>{
-    if(!c.dataInicio) return false;
-    if(!rangeRel) return true;
-    return c.dataInicio>=rangeRel.from && c.dataInicio<=rangeRel.to;
-  });
-
-  // Receita inicial = o que foi recebido na primeira visita
-  const receitaInicial = iniciaisRel.reduce((s,c)=>s+(+c.inicialRecebido||0),0);
-
-  // Custo inicial = só para clientes que JÁ receberam pagamento antecipado
-  // Custo proporcional à quantidade inicial entregue × custo por brownie
-  const custoInicial = iniciaisRel.reduce((s,c)=>{
-    if(!(+c.inicialRecebido > 0)) return s; // só conta se houve pagamento
-    const qtd = (c.inicialBrig||0)+(c.inicialNinho||0)+(c.inicialNN||0);
-    return s + qtd * (custos.brigadeiro||0);
-  },0);
-
-  // Saldo inicial = cobrado - recebido (se não quitou tudo)
-  const saldoInicialRel = iniciaisRel.reduce((s,c)=>s+Math.max(0,(+c.inicialValor||0)-(+c.inicialRecebido||0)),0);
-
-  const receita    = filtradas.reduce((s,v)=>s+(+v.recebido||0),0) + receitaInicial;
-  const custoTotal = filtradas.reduce((s,v)=>s+custoVisita(v),0) + custoInicial;
+  const receita    = filtradas.reduce((s,v)=>s+(+v.recebido||0),0);
+  const custoTotal = filtradas.reduce((s,v)=>s+custoVisita(v),0);
   const lucro      = receita - custoTotal;
   const margem     = receita > 0 ? Math.round((lucro/receita)*100) : 0;
   const ticketMedio    = filtradas.length > 0 ? receita / filtradas.length : 0;
   const mediaPorVisita = filtradas.length > 0 ? totalVend / filtradas.length : 0;
-  const saldoAberto    = filtradas.reduce((s,v)=>s+Math.max(0,(+v.valor||0)-(+v.recebido||0)),0) + saldoInicialRel;
+  const saldoAberto    = filtradas.reduce((s,v)=>s+Math.max(0,(+v.valor||0)-(+v.recebido||0)),0);
   const comCusto = temCusto();
   const label = periodLabels[relPeriod] || '';
 
@@ -1753,25 +1681,14 @@ function renderRelatorios(){
   `;
 
   // Gráfico: vendas por mês (últimos 6 meses)
-  // Função auxiliar: receita+custo inicial de um mês
-  function inicialDoMes(key){
-    const rec = clientes.filter(c=>c.dataInicio&&c.dataInicio.startsWith(key)&&(+c.inicialRecebido>0))
-      .reduce((s,c)=>s+(+c.inicialRecebido||0),0);
-    const custo = clientes.filter(c=>c.dataInicio&&c.dataInicio.startsWith(key)&&(+c.inicialRecebido>0))
-      .reduce((s,c)=>s+((c.inicialBrig||0)+(c.inicialNinho||0)+(c.inicialNN||0))*(custos.brigadeiro||0),0);
-    return {rec, custo};
-  }
-
   const meses6 = [];
   for(let i=5;i>=0;i--){
     const d = new Date(); d.setDate(1); d.setMonth(d.getMonth()-i);
     const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
     const nomeM = d.toLocaleDateString('pt-BR',{month:'short'}).replace('.','');
     const vends = visitas.filter(v=>v.data&&v.data.startsWith(key)).reduce((s,v)=>s+totalVendidosVisita(v),0);
-    const recVisitas = visitas.filter(v=>v.data&&v.data.startsWith(key)).reduce((s,v)=>s+(+v.recebido||0),0);
-    const {rec: recIni, custo: custoIni} = inicialDoMes(key);
-    const rec = recVisitas + recIni;
-    meses6.push({label:nomeM, key, vends, rec, recIni, custoIni});
+    const rec   = visitas.filter(v=>v.data&&v.data.startsWith(key)).reduce((s,v)=>s+(+v.recebido||0),0);
+    meses6.push({label:nomeM, key, vends, rec});
   }
   drawBarChart('chart-mensal', meses6.map(m=>m.label), [{label:'Brownies', data:meses6.map(m=>m.vends), color:'#b87316'}]);
 
@@ -1788,13 +1705,13 @@ function renderRelatorios(){
       {label:'Receita', data:meses6.map(m=>m.rec), color:'#0d6e52'},
       {label:'Custo', data:meses6.map(m=>{
         const vMes=visitas.filter(v=>v.data&&v.data.startsWith(m.key));
-        return vMes.reduce((s,v)=>s+custoVisita(v),0) + m.custoIni;
+        return vMes.reduce((s,v)=>s+custoVisita(v),0);
       }), color:'#9a3b1c'},
       {label:'Lucro', data:meses6.map(m=>{
         const vMes=visitas.filter(v=>v.data&&v.data.startsWith(m.key));
-        const r = vMes.reduce((s,v)=>s+(+v.recebido||0),0) + m.recIni;
-        const c = vMes.reduce((s,v)=>s+custoVisita(v),0) + m.custoIni;
-        return Math.max(0, r-c);
+        const r=vMes.reduce((s,v)=>s+(+v.recebido||0),0);
+        const c=vMes.reduce((s,v)=>s+custoVisita(v),0);
+        return Math.max(0,r-c);
       }), color:'#1856a0'},
     ];
     drawBarChart('chart-financeiro', meses6.map(m=>m.label), dsFin, {money:true});
@@ -1816,8 +1733,7 @@ function renderRelatorios(){
   if(rankLabel) rankLabel.textContent = '('+label+')';
   const rankData = clientes.map(c=>{
     const cv = filterByPeriod(visitas.filter(v=>v.clienteId===c.id), relPeriod);
-    const recIniC = rangeRel&&c.dataInicio&&c.dataInicio>=rangeRel.from&&c.dataInicio<=rangeRel.to ? (+c.inicialRecebido||0) : 0;
-    return {c, vendidos:cv.reduce((s,v)=>s+totalVendidosVisita(v),0), recebido:cv.reduce((s,v)=>s+(+v.recebido||0),0)+recIniC};
+    return {c, vendidos:cv.reduce((s,v)=>s+totalVendidosVisita(v),0), recebido:cv.reduce((s,v)=>s+(+v.recebido||0),0)};
   }).filter(x=>x.vendidos>0||x.recebido>0).sort((a,b)=>b.recebido-a.recebido).slice(0,8);
   const medals=['🥇','🥈','🥉'];
   const rankEl = document.getElementById('rel-ranking');
@@ -1843,10 +1759,9 @@ function renderRelatorios(){
   const diasNoMes = new Date(hoje.getFullYear(), hoje.getMonth()+1, 0).getDate();
   const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
   const visitasMes = visitas.filter(v=>v.data&&v.data.startsWith(mesAtual));
-  const {rec: recIniMes, custo: custoIniMes} = inicialDoMes(mesAtual);
   const vendMes  = visitasMes.reduce((s,v)=>s+totalVendidosVisita(v),0);
-  const recMes   = visitasMes.reduce((s,v)=>s+(+v.recebido||0),0) + recIniMes;
-  const custoMes = visitasMes.reduce((s,v)=>s+custoVisita(v),0) + custoIniMes;
+  const recMes   = visitasMes.reduce((s,v)=>s+(+v.recebido||0),0);
+  const custoMes = visitasMes.reduce((s,v)=>s+custoVisita(v),0);
   const ritmoVend  = diaAtual>0 ? vendMes/diaAtual : 0;
   const ritmoRec   = diaAtual>0 ? recMes/diaAtual  : 0;
   const ritmoCusto = diaAtual>0 ? custoMes/diaAtual : 0;
