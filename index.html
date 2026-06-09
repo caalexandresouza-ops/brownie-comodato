@@ -332,6 +332,44 @@ input[readonly]{background:var(--surface2);opacity:.8}
   </main>
 </div>
 
+<!-- MODAL EDITAR REPOSIÇÃO INICIAL -->
+<div id="modal-editar-inicial" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;overflow-y:auto;padding:24px 12px">
+  <div style="background:var(--surface);border-radius:var(--radius-lg);max-width:460px;margin:0 auto;padding:1.5rem;box-shadow:0 8px 40px rgba(0,0,0,.18)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
+      <h2 style="font-size:17px;font-weight:700"><i class="ti ti-flag" style="color:var(--blue)"></i> Editar reposição inicial</h2>
+      <button onclick="fecharEditarInicial()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:20px">✕</button>
+    </div>
+
+    <div id="ei-cliente-nome" style="background:var(--surface2);border-radius:var(--radius);padding:.65rem 1rem;font-size:14px;font-weight:600;margin-bottom:1rem;color:var(--text)"></div>
+    <input type="hidden" id="ei-cliente-id">
+
+    <div class="field">
+      <label>Data da primeira entrega</label>
+      <input type="date" id="ei-data">
+    </div>
+
+    <div class="sabores-grid" style="margin-bottom:.85rem">
+      <div class="sabor-card">
+        <div class="sabor-nome"><div class="sabor-dot" style="background:#6b3f10"></div>Brigadeiro</div>
+        <div class="field"><label>Qtd inicial</label><input type="number" id="ei-brig" min="0" placeholder="0"></div>
+      </div>
+      <div class="sabor-card">
+        <div class="sabor-nome"><div class="sabor-dot" style="background:#c9a84c"></div>Ninho</div>
+        <div class="field"><label>Qtd inicial</label><input type="number" id="ei-ninho" min="0" placeholder="0"></div>
+      </div>
+      <div class="sabor-card">
+        <div class="sabor-nome"><div class="sabor-dot" style="background:#7b3f8c"></div>Ninho c/ Nutella</div>
+        <div class="field"><label>Qtd inicial</label><input type="number" id="ei-nn" min="0" placeholder="0"></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn" onclick="fecharEditarInicial()"><i class="ti ti-x"></i> Cancelar</button>
+      <button class="btn primary" id="btn-salvar-inicial" onclick="salvarEditarInicial()"><i class="ti ti-check"></i> Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL RECEBIMENTO AVULSO -->
 <div id="modal-recebimento" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;overflow-y:auto;padding:24px 12px">
   <div style="background:var(--surface);border-radius:var(--radius-lg);max-width:460px;margin:0 auto;padding:1.5rem;box-shadow:0 8px 40px rgba(0,0,0,.18)">
@@ -1491,6 +1529,62 @@ function gerarComprovante(visitaId){
   win.document.close();
 }
 
+function abrirEditarInicial(clienteId){
+  const c = clientes.find(x=>x.id===clienteId);
+  if(!c){ toast('Cliente não encontrado.',false); return; }
+  document.getElementById('ei-cliente-id').value    = clienteId;
+  document.getElementById('ei-cliente-nome').textContent = '👤 ' + c.nome;
+  document.getElementById('ei-data').value          = c.dataInicio||todayLocal();
+  document.getElementById('ei-brig').value          = c.inicialBrig||0;
+  document.getElementById('ei-ninho').value         = c.inicialNinho||0;
+  document.getElementById('ei-nn').value            = c.inicialNN||0;
+  document.getElementById('modal-editar-inicial').style.display = 'block';
+}
+function fecharEditarInicial(){
+  document.getElementById('modal-editar-inicial').style.display = 'none';
+}
+async function salvarEditarInicial(){
+  const clienteId   = document.getElementById('ei-cliente-id').value;
+  const dataInicio  = document.getElementById('ei-data').value;
+  const inicialBrig = +(document.getElementById('ei-brig').value)||0;
+  const inicialNinho= +(document.getElementById('ei-ninho').value)||0;
+  const inicialNN   = +(document.getElementById('ei-nn').value)||0;
+
+  setLoading('btn-salvar-inicial', true);
+  try {
+    await sbUpdate('bc_clientes', clienteId, {
+      data_inicio: dataInicio,
+      inicial_brigadeiro: inicialBrig,
+      inicial_ninho: inicialNinho,
+      inicial_ninho_nutella: inicialNN,
+      estoque: inicialBrig + inicialNinho + inicialNN,
+      estoque_brigadeiro: inicialBrig,
+      estoque_ninho: inicialNinho,
+      estoque_ninho_nutella: inicialNN,
+    });
+
+    // Atualizar memória local
+    const c = clientes.find(x=>x.id===clienteId);
+    if(c){
+      c.dataInicio  = dataInicio;
+      c.inicialBrig = inicialBrig;
+      c.inicialNinho= inicialNinho;
+      c.inicialNN   = inicialNN;
+      c.estoque     = inicialBrig+inicialNinho+inicialNN;
+      c.estoqueBrig = inicialBrig;
+      c.estoqueNinho= inicialNinho;
+      c.estoqueNN   = inicialNN;
+    }
+
+    toast('Reposição inicial atualizada!');
+    fecharEditarInicial();
+    abrirPerfil(clienteId);
+  } catch(e){
+    toast('Erro: '+e.message, false);
+  }
+  setLoading('btn-salvar-inicial', false);
+}
+
 function abrirRecebimento(clienteId){
   const c = clientes.find(x=>x.id===clienteId);
   if(!c){ toast('Cliente não encontrado.',false); return; }
@@ -1750,7 +1844,10 @@ function abrirPerfil(id){
               <span class="badge blue"><i class="ti ti-flag" style="font-size:11px"></i> Reposição inicial</span>
               <span style="font-size:12px;color:var(--text2)">${inicialTotal} brownies deixados</span>
             </div>
-            <button class="btn small" onclick="gerarComprovanteInicial('${c.id}')" title="Gerar comprovante"><i class="ti ti-file-text"></i></button>
+            <div style="display:flex;gap:6px">
+              <button class="btn small" onclick="abrirEditarInicial('${c.id}')" title="Editar reposição inicial"><i class="ti ti-edit"></i></button>
+              <button class="btn small" onclick="gerarComprovanteInicial('${c.id}')" title="Gerar comprovante"><i class="ti ti-file-text"></i></button>
+            </div>
           </div>
           <div class="tl-stats">
             <div class="tl-stat"><div class="n" style="color:var(--blue)">${inicialTotal}</div><div class="l">total inicial</div></div>
