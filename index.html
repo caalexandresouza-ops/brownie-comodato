@@ -333,6 +333,73 @@ input[readonly]{background:var(--surface2);opacity:.8}
 </div>
 
 <!-- MODAL CLIENTE -->
+<!-- MODAL EDITAR VISITA -->
+<div id="modal-editar-visita" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;overflow-y:auto;padding:24px 12px">
+  <div style="background:var(--surface);border-radius:var(--radius-lg);max-width:540px;margin:0 auto;padding:1.5rem;box-shadow:0 8px 40px rgba(0,0,0,.18)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
+      <h2 style="font-size:17px;font-weight:700"><i class="ti ti-edit" style="color:var(--amber)"></i> Editar visita</h2>
+      <button onclick="fecharEditarVisita()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:20px">✕</button>
+    </div>
+
+    <input type="hidden" id="ev-id">
+
+    <div class="row">
+      <div class="field"><label>Cliente</label>
+        <select id="ev-cliente" onchange="onEditClienteChange()"></select>
+      </div>
+      <div class="field"><label>Data</label>
+        <input type="date" id="ev-data">
+      </div>
+    </div>
+
+    <div class="sabores-grid" style="margin-bottom:.85rem">
+      <div class="sabor-card">
+        <div class="sabor-nome"><div class="sabor-dot" style="background:#6b3f10"></div>Brigadeiro</div>
+        <div class="row">
+          <div class="field"><label>Vendidos</label><input type="number" id="ev-brig-v" min="0" placeholder="0" oninput="calcEditSabores()"></div>
+          <div class="field"><label>Repostos</label><input type="number" id="ev-brig-r" min="0" placeholder="0" oninput="calcEditSabores()"></div>
+        </div>
+      </div>
+      <div class="sabor-card">
+        <div class="sabor-nome"><div class="sabor-dot" style="background:#c9a84c"></div>Ninho</div>
+        <div class="row">
+          <div class="field"><label>Vendidos</label><input type="number" id="ev-ninho-v" min="0" placeholder="0" oninput="calcEditSabores()"></div>
+          <div class="field"><label>Repostos</label><input type="number" id="ev-ninho-r" min="0" placeholder="0" oninput="calcEditSabores()"></div>
+        </div>
+      </div>
+      <div class="sabor-card">
+        <div class="sabor-nome"><div class="sabor-dot" style="background:#7b3f8c"></div>Ninho c/ Nutella</div>
+        <div class="row">
+          <div class="field"><label>Vendidos</label><input type="number" id="ev-nn-v" min="0" placeholder="0" oninput="calcEditSabores()"></div>
+          <div class="field"><label>Repostos</label><input type="number" id="ev-nn-r" min="0" placeholder="0" oninput="calcEditSabores()"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field"><label>Total vendidos</label><input type="number" id="ev-vendidos" readonly placeholder="0"></div>
+      <div class="field"><label>Total repostos</label><input type="number" id="ev-repostos" readonly placeholder="0"></div>
+      <div class="field"><label>Estoque antes</label><input type="number" id="ev-estoque-antes" placeholder="—"></div>
+      <div class="field"><label>Estoque após</label><input type="number" id="ev-estoque-depois" readonly placeholder="—"></div>
+    </div>
+
+    <div class="divider"></div>
+    <h3 style="font-size:14px;font-weight:600;margin-bottom:.85rem"><i class="ti ti-cash" style="color:var(--teal)"></i> Cobrança</h3>
+    <div class="row">
+      <div class="field"><label>Preço por brownie (R$)</label><input type="number" id="ev-preco" min="0" step="0.01" placeholder="0,00" oninput="calcEditVisita()"></div>
+      <div class="field"><label>Valor cobrado (R$)</label><input type="number" id="ev-valor" min="0" step="0.01" placeholder="0,00"></div>
+      <div class="field"><label>Valor recebido (R$)</label><input type="number" id="ev-recebido" min="0" step="0.01" placeholder="0,00"></div>
+    </div>
+    <div class="field"><label>Observações</label>
+      <textarea id="ev-obs" placeholder="Notas sobre a visita..."></textarea>
+    </div>
+
+    <div class="actions">
+      <button class="btn" onclick="fecharEditarVisita()"><i class="ti ti-x"></i> Cancelar</button>
+      <button class="btn primary" id="btn-salvar-edicao" onclick="salvarEdicaoVisita()"><i class="ti ti-check"></i> Salvar alterações</button>
+    </div>
+  </div>
+</div>
 <div class="modal-bg" id="modal-cliente" onclick="if(event.target===this)closeModal()">
   <div class="modal">
     <h2 id="modal-title">Novo cliente</h2>
@@ -1117,6 +1184,7 @@ function renderVisitas(){
             ? `<span class="badge coral">saldo acum. ${fmtMoney(saldoAcum)}</span>`
             : `<span class="badge teal"><i class="ti ti-check" style="font-size:11px"></i> quitado</span>`}
           ${recebeuExtra?`<span class="badge blue" title="Recebeu mais do que o cobrado nessa visita (incluiu dívidas anteriores)"><i class="ti ti-arrow-bear-right" style="font-size:11px"></i> incluiu dívida anterior</span>`:''}
+          <button class="btn small" onclick="abrirEditarVisita('${v.id}')" title="Editar visita"><i class="ti ti-edit"></i></button>
           <button class="btn small" onclick="gerarComprovante('${v.id}')" title="Gerar comprovante"><i class="ti ti-file-text"></i></button>
           <button class="btn small danger" onclick="deleteVisita('${v.id}')"><i class="ti ti-trash"></i></button>
         </div>
@@ -1367,6 +1435,114 @@ function gerarComprovante(visitaId){
   win.document.close();
 }
 
+function abrirEditarVisita(id){
+  const v = visitas.find(x=>x.id===id);
+  if(!v){ toast('Visita não encontrada.',false); return; }
+
+  // Preencher select de clientes
+  const sel = document.getElementById('ev-cliente');
+  sel.innerHTML = clientes.map(c=>`<option value="${c.id}"${c.id===v.clienteId?' selected':''}>${c.nome}</option>`).join('');
+
+  document.getElementById('ev-id').value         = v.id;
+  document.getElementById('ev-data').value        = v.data||'';
+  document.getElementById('ev-brig-v').value      = v.sabores?.brigadeiro||0;
+  document.getElementById('ev-ninho-v').value     = v.sabores?.ninho||0;
+  document.getElementById('ev-nn-v').value        = v.sabores?.ninhoNutella||0;
+  document.getElementById('ev-brig-r').value      = v.saboresRepostos?.brigadeiro||0;
+  document.getElementById('ev-ninho-r').value     = v.saboresRepostos?.ninho||0;
+  document.getElementById('ev-nn-r').value        = v.saboresRepostos?.ninhoNutella||0;
+  document.getElementById('ev-estoque-antes').value = v.estoqueAntes||0;
+  document.getElementById('ev-preco').value       = v.preco||'';
+  document.getElementById('ev-valor').value       = v.valor||'';
+  document.getElementById('ev-recebido').value    = v.recebido||'';
+  document.getElementById('ev-obs').value         = v.obs||'';
+
+  calcEditSabores();
+  document.getElementById('modal-editar-visita').style.display='block';
+}
+function fecharEditarVisita(){
+  document.getElementById('modal-editar-visita').style.display='none';
+}
+function onEditClienteChange(){
+  const c = clientes.find(x=>x.id===document.getElementById('ev-cliente').value);
+  if(c && c.precoVenda>0) document.getElementById('ev-preco').value = c.precoVenda.toFixed(2);
+}
+function calcEditSabores(){
+  const bv=+(document.getElementById('ev-brig-v').value)||0;
+  const nv=+(document.getElementById('ev-ninho-v').value)||0;
+  const nnv=+(document.getElementById('ev-nn-v').value)||0;
+  const br=+(document.getElementById('ev-brig-r').value)||0;
+  const nr=+(document.getElementById('ev-ninho-r').value)||0;
+  const nnr=+(document.getElementById('ev-nn-r').value)||0;
+  const antes = +(document.getElementById('ev-estoque-antes').value)||0;
+  const vendidos = bv+nv+nnv;
+  const repostos = br+nr+nnr;
+  document.getElementById('ev-vendidos').value = vendidos;
+  document.getElementById('ev-repostos').value = repostos;
+  document.getElementById('ev-estoque-depois').value = Math.max(0, antes - vendidos + repostos);
+  calcEditVisita();
+}
+function calcEditVisita(){
+  const preco = +(document.getElementById('ev-preco').value)||0;
+  const vend  = +(document.getElementById('ev-vendidos').value)||0;
+  if(preco>0 && vend>0) document.getElementById('ev-valor').value = (preco*vend).toFixed(2);
+}
+async function salvarEdicaoVisita(){
+  const id         = document.getElementById('ev-id').value;
+  const clienteId  = document.getElementById('ev-cliente').value;
+  const data       = document.getElementById('ev-data').value;
+  if(!clienteId||!data){ toast('Preencha cliente e data.',false); return; }
+
+  const bv  = +(document.getElementById('ev-brig-v').value)||0;
+  const nv  = +(document.getElementById('ev-ninho-v').value)||0;
+  const nnv = +(document.getElementById('ev-nn-v').value)||0;
+  const br  = +(document.getElementById('ev-brig-r').value)||0;
+  const nr  = +(document.getElementById('ev-ninho-r').value)||0;
+  const nnr = +(document.getElementById('ev-nn-r').value)||0;
+  const vendidos     = bv+nv+nnv;
+  const repostos     = br+nr+nnr;
+  const estoqueAntes = +(document.getElementById('ev-estoque-antes').value)||0;
+  const estoqueDepois= +(document.getElementById('ev-estoque-depois').value)||0;
+
+  const updates = {
+    cliente_id: clienteId,
+    data: data.slice(0,10),
+    vendidos, repostos,
+    estoque_antes: estoqueAntes,
+    estoque_depois: estoqueDepois,
+    preco:    +(document.getElementById('ev-preco').value)||0,
+    valor:    +(document.getElementById('ev-valor').value)||0,
+    recebido: +(document.getElementById('ev-recebido').value)||0,
+    obs:      document.getElementById('ev-obs').value,
+    sabores:         {brigadeiro:bv, ninho:nv, ninhoNutella:nnv},
+    sabores_repostos:{brigadeiro:br, ninho:nr, ninhoNutella:nnr},
+  };
+
+  setLoading('btn-salvar-edicao', true);
+  try {
+    await sbUpdate('bc_visitas', id, updates);
+
+    // Atualizar memória local
+    const idx = visitas.findIndex(x=>x.id===id);
+    if(idx>=0){
+      visitas[idx] = {...visitas[idx], clienteId, data:data.slice(0,10), vendidos, repostos,
+        estoqueAntes, estoqueDepois,
+        preco: updates.preco, valor: updates.valor, recebido: updates.recebido,
+        obs: updates.obs,
+        sabores:{brigadeiro:bv,ninho:nv,ninhoNutella:nnv},
+        saboresRepostos:{brigadeiro:br,ninho:nr,ninhoNutella:nnr}};
+    }
+
+    toast('Visita atualizada!');
+    fecharEditarVisita();
+    renderVisitas();
+    renderDashboard();
+  } catch(e){
+    toast('Erro ao salvar: '+e.message, false);
+  }
+  setLoading('btn-salvar-edicao', false);
+}
+
 async function deleteVisita(id){
   if(!confirm('Remover esta visita?'))return;
   try {
@@ -1471,6 +1647,7 @@ function abrirPerfil(id){
                   ?`<span class="badge coral">saldo acum. ${fmtMoney(sdAcum)}</span>`
                   :'<span class="badge teal"><i class="ti ti-check" style="font-size:11px"></i> quitado</span>'}
                 ${recebeuExtra?`<span class="badge blue" title="Recebeu mais do que o cobrado — inclui dívida anterior"><i class="ti ti-arrow-bear-right" style="font-size:11px"></i> incluiu dívida anterior</span>`:''}
+                <button class="btn small" onclick="abrirEditarVisita('${v.id}')" title="Editar visita"><i class="ti ti-edit"></i></button>
                 <button class="btn small" onclick="gerarComprovante('${v.id}')" title="Gerar comprovante"><i class="ti ti-file-text"></i></button>
                 <button class="btn small danger" onclick="deleteVisitaPerfil('${v.id}','${c.id}')"><i class="ti ti-trash"></i></button>
               </div>
