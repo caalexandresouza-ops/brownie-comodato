@@ -633,6 +633,14 @@ input[readonly]{background:var(--surface2);opacity:.8}
         <select id="c-status"><option value="ativo">Ativo</option><option value="inativo">Inativo</option></select>
       </div>
     </div>
+    <div class="field" style="margin-bottom:1rem">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:500">
+        <input type="checkbox" id="c-requer-nf" style="width:18px;height:18px;accent-color:var(--amber);cursor:pointer;flex-shrink:0">
+        Este cliente requer Nota Fiscal (NF)
+      </label>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px;margin-left:28px">Marque se o cliente precisa de NF a cada venda</div>
+    </div>
+
     <div class="field" style="margin-bottom:1rem"><label>Observações</label>
       <textarea id="c-obs" placeholder="Horários, preferências, anotações..."></textarea>
     </div>
@@ -696,6 +704,7 @@ function dbToCliente(r){
     dataInicio:r.data_inicio||null,
     obs:r.obs||'',status:r.status||'ativo',diaVisita:r.dia_visita||'',
     precoVenda:r.preco_venda||0,precoRevenda:r.preco_revenda||0,
+    requerNf:!!r.requer_nf,
     criadoEm:r.criado_em};
 }
 function clienteToDb(c, isNew=false){
@@ -707,7 +716,7 @@ function clienteToDb(c, isNew=false){
     estoque_ninho:c.estoqueNinho||0,
     estoque_ninho_nutella:c.estoqueNN||0,
     obs:c.obs,status:c.status,dia_visita:c.diaVisita,preco_venda:c.precoVenda||0,preco_revenda:c.precoRevenda||0,
-};
+    requer_nf:c.requerNf||false};
   // Inicial only saved once on creation
   if(isNew){
     db.inicial_brigadeiro = c.estoqueBrig||0;
@@ -1032,6 +1041,7 @@ function renderClientes(){
         ${(c.estoqueNN||0)>0?`<span class="badge amber" style="background:#f5eefa;color:#7b3f8c"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#7b3f8c;margin-right:4px"></span>N.Nutella: ${c.estoqueNN}</span>`:''}
         ${c.precoVenda>0?`<span class="badge teal"><i class="ti ti-tag" style="font-size:12px"></i>vendo a ${fmtMoney(c.precoVenda)}</span>`:''}
         ${c.precoRevenda>0?`<span class="badge blue"><i class="ti ti-tag" style="font-size:12px"></i>revende a ${fmtMoney(c.precoRevenda)}</span>`:''}
+        ${c.requerNf?`<span class="badge amber"><i class="ti ti-file-invoice" style="font-size:12px"></i>Requer NF</span>`:''}
         ${ult?`<span class="tag">Última visita: ${fmtDate(ult.data)}</span>`:'<span class="tag">Sem visitas</span>'}
         ${totalV>0?`<span class="tag">${totalV} vendidos</span>`:''}
         ${totalR>0?`<span class="tag">${fmtMoney(totalR)} recebido</span>`:''}
@@ -1078,6 +1088,7 @@ function openClientModal(c=null){
   ['c-id','c-nome','c-responsavel','c-telefone','c-whatsapp','c-endereco','c-bairro','c-cidade','c-ref',
    'c-est-brig','c-est-ninho','c-est-nn','c-ini-brig','c-ini-ninho','c-ini-nn','c-data-inicio',
    'c-preco-venda','c-preco-revenda','c-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const nfEl=document.getElementById('c-requer-nf'); if(nfEl) nfEl.checked=false;
   document.getElementById('c-status').value='ativo';
   document.getElementById('c-dia').value='';
   document.getElementById('modal-title').textContent=c?'Editar cliente':'Novo cliente';
@@ -1107,6 +1118,7 @@ function openClientModal(c=null){
     document.getElementById('c-preco-venda').value=c.precoVenda||'';
     document.getElementById('c-preco-revenda').value=c.precoRevenda||'';
     document.getElementById('c-obs').value=c.obs||'';
+    const nfEl=document.getElementById('c-requer-nf'); if(nfEl) nfEl.checked=!!c.requerNf;
     document.getElementById('c-status').value=c.status||'ativo';
     document.getElementById('c-dia').value=c.diaVisita||'';
   } else {
@@ -1134,6 +1146,7 @@ async function salvarCliente(){
     dataInicio:document.getElementById('c-data-inicio').value||todayLocal(),
     precoVenda:+(document.getElementById('c-preco-venda').value)||0,
     precoRevenda:+(document.getElementById('c-preco-revenda').value)||0,
+    requerNf:document.getElementById('c-requer-nf')?.checked||false,
     obs:document.getElementById('c-obs').value,
     status:document.getElementById('c-status').value,diaVisita:document.getElementById('c-dia').value};
   obj.estoque=(obj.estoqueBrig||0)+(obj.estoqueNinho||0)+(obj.estoqueNN||0);
