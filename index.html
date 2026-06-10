@@ -143,6 +143,7 @@ input[readonly]{background:var(--surface2);opacity:.8}
     <button class="nav-btn active" onclick="showPage('dashboard')" id="nav-dashboard"><i class="ti ti-layout-dashboard"></i><span>Painel</span></button>
     <button class="nav-btn" onclick="showPage('clientes')" id="nav-clientes"><i class="ti ti-building-store"></i><span>Clientes</span></button>
     <button class="nav-btn" onclick="showPage('nova-visita')" id="nav-nova-visita"><i class="ti ti-plus"></i><span>Nova Visita</span></button>
+    <button class="nav-btn" onclick="abrirVendaAvulsa()" id="nav-avulsa" style="color:var(--amber)"><i class="ti ti-shopping-bag"></i><span>Venda Avulsa</span></button>
     <button class="nav-btn" onclick="showPage('visitas')" id="nav-visitas"><i class="ti ti-calendar-check"></i><span>Histórico</span></button>
     <button class="nav-btn" onclick="showPage('relatorios')" id="nav-relatorios"><i class="ti ti-chart-line"></i><span>Relatórios</span></button>
   </nav>
@@ -330,6 +331,71 @@ input[readonly]{background:var(--surface2);opacity:.8}
     </div>
 
   </main>
+</div>
+
+<!-- MODAL VENDA AVULSA -->
+<div id="modal-venda-avulsa" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;overflow-y:auto;padding:24px 12px">
+  <div style="background:var(--surface);border-radius:var(--radius-lg);max-width:500px;margin:0 auto;padding:1.5rem;box-shadow:0 8px 40px rgba(0,0,0,.18)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+      <h2 style="font-size:17px;font-weight:700"><i class="ti ti-shopping-bag" style="color:var(--amber)"></i> Venda Avulsa</h2>
+      <button onclick="fecharVendaAvulsa()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:20px">✕</button>
+    </div>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:1.25rem">Venda sem identificar o comprador. Entra automaticamente no painel e relatórios.</p>
+
+    <div class="field">
+      <label>Data da venda</label>
+      <input type="date" id="av-data">
+    </div>
+
+    <div class="sabores-grid" style="margin-bottom:.85rem">
+      <div class="sabor-card">
+        <div class="sabor-nome"><div class="sabor-dot" style="background:#6b3f10"></div>Brigadeiro</div>
+        <div class="field"><label>Quantidade</label><input type="number" id="av-brig" min="0" placeholder="0" oninput="calcAvulsa()"></div>
+      </div>
+      <div class="sabor-card">
+        <div class="sabor-nome"><div class="sabor-dot" style="background:#c9a84c"></div>Ninho</div>
+        <div class="field"><label>Quantidade</label><input type="number" id="av-ninho" min="0" placeholder="0" oninput="calcAvulsa()"></div>
+      </div>
+      <div class="sabor-card">
+        <div class="sabor-nome"><div class="sabor-dot" style="background:#7b3f8c"></div>Ninho c/ Nutella</div>
+        <div class="field"><label>Quantidade</label><input type="number" id="av-nn" min="0" placeholder="0" oninput="calcAvulsa()"></div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Total brownies</label>
+        <input type="number" id="av-total" readonly placeholder="0">
+      </div>
+      <div class="field">
+        <label>Preço de venda (R$)</label>
+        <input type="number" id="av-preco-venda" min="0" step="0.01" placeholder="0,00" oninput="calcAvulsa()">
+      </div>
+      <div class="field">
+        <label>Custo por brownie (R$)</label>
+        <input type="number" id="av-custo" min="0" step="0.01" placeholder="0,00" oninput="calcAvulsa()">
+      </div>
+    </div>
+
+    <!-- Resumo financeiro -->
+    <div id="av-resumo" style="display:none;background:var(--surface2);border-radius:var(--radius);padding:.85rem;margin-bottom:1rem">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
+        <div><div id="av-res-receita" style="font-size:15px;font-weight:700;color:var(--teal)">R$ 0</div><div style="font-size:11px;color:var(--text3)">Receita</div></div>
+        <div><div id="av-res-custo" style="font-size:15px;font-weight:700;color:var(--coral)">R$ 0</div><div style="font-size:11px;color:var(--text3)">Custo</div></div>
+        <div><div id="av-res-lucro" style="font-size:15px;font-weight:700;color:var(--amber)">R$ 0</div><div style="font-size:11px;color:var(--text3)">Lucro</div></div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Observações (opcional)</label>
+      <input type="text" id="av-obs" placeholder="Ex: venda na feira, evento...">
+    </div>
+
+    <div class="actions">
+      <button class="btn" onclick="fecharVendaAvulsa()"><i class="ti ti-x"></i> Cancelar</button>
+      <button class="btn primary" id="btn-salvar-avulsa" onclick="salvarVendaAvulsa()"><i class="ti ti-check"></i> Registrar venda</button>
+    </div>
+  </div>
 </div>
 
 <!-- MODAL EDITAR REPOSIÇÃO INICIAL -->
@@ -657,6 +723,7 @@ function dbToVisita(r){
     recebido:r.recebido||0,preco:r.preco||0,obs:r.obs||'',
     sabores:r.sabores||{brigadeiro:0,ninho:0,ninhoNutella:0},
     saboresRepostos:r.sabores_repostos||{brigadeiro:0,ninho:0,ninhoNutella:0},
+    custoUnitario:r.custo_unitario||0,
     criadoEm:r.criado_em};
 }
 
@@ -1529,6 +1596,115 @@ function gerarComprovante(visitaId){
   win.document.close();
 }
 
+// ─── VENDA AVULSA ────────────────────────────────────────────────
+const AVULSA_ID = '__venda_avulsa__';
+
+async function garantirClienteAvulso(){
+  // Verifica se já existe cliente virtual de venda avulsa
+  let c = clientes.find(x=>x.id===AVULSA_ID||x.nome==='Venda Avulsa');
+  if(!c){
+    const obj = {
+      id: AVULSA_ID, nome:'Venda Avulsa', responsavel:'', telefone:'', whatsapp:'',
+      endereco:'', bairro:'', cidade:'', ref:'', status:'ativo',
+      estoque:0, estoqueBrig:0, estoqueNinho:0, estoqueNN:0,
+      inicialBrig:0, inicialNinho:0, inicialNN:0, dataInicio:todayLocal(),
+      diaVisita:'', precoVenda:0, precoRevenda:0, obs:'Cliente virtual para vendas avulsas'
+    };
+    try {
+      await sbInsert('bc_clientes', {
+        id:AVULSA_ID, nome:'Venda Avulsa', status:'ativo',
+        estoque:0, obs:'Cliente virtual para vendas avulsas'
+      });
+    } catch(e){ /* pode já existir */ }
+    clientes.push(obj);
+    c = obj;
+  }
+  return c;
+}
+
+function abrirVendaAvulsa(){
+  document.getElementById('av-data').value  = todayLocal();
+  document.getElementById('av-brig').value  = '';
+  document.getElementById('av-ninho').value = '';
+  document.getElementById('av-nn').value    = '';
+  document.getElementById('av-total').value = '';
+  document.getElementById('av-preco-venda').value = '';
+  document.getElementById('av-custo').value = '';
+  document.getElementById('av-obs').value   = '';
+  document.getElementById('av-resumo').style.display = 'none';
+  document.getElementById('modal-venda-avulsa').style.display = 'block';
+  setTimeout(()=>document.getElementById('av-brig').focus(), 100);
+}
+function fecharVendaAvulsa(){
+  document.getElementById('modal-venda-avulsa').style.display = 'none';
+}
+function calcAvulsa(){
+  const bv  = +(document.getElementById('av-brig').value)||0;
+  const nv  = +(document.getElementById('av-ninho').value)||0;
+  const nnv = +(document.getElementById('av-nn').value)||0;
+  const total = bv+nv+nnv;
+  const preco = +(document.getElementById('av-preco-venda').value)||0;
+  const custo = +(document.getElementById('av-custo').value)||0;
+  document.getElementById('av-total').value = total;
+  if(total > 0 && (preco > 0 || custo > 0)){
+    const receita = preco * total;
+    const custoT  = custo * total;
+    const lucro   = receita - custoT;
+    document.getElementById('av-res-receita').textContent = fmtMoney(receita);
+    document.getElementById('av-res-custo').textContent   = fmtMoney(custoT);
+    document.getElementById('av-res-lucro').textContent   = fmtMoney(lucro);
+    document.getElementById('av-resumo').style.display = 'block';
+  } else {
+    document.getElementById('av-resumo').style.display = 'none';
+  }
+}
+async function salvarVendaAvulsa(){
+  const data  = document.getElementById('av-data').value;
+  const bv    = +(document.getElementById('av-brig').value)||0;
+  const nv    = +(document.getElementById('av-ninho').value)||0;
+  const nnv   = +(document.getElementById('av-nn').value)||0;
+  const total = bv+nv+nnv;
+  const preco = +(document.getElementById('av-preco-venda').value)||0;
+  const custo = +(document.getElementById('av-custo').value)||0;
+  const obs   = document.getElementById('av-obs').value;
+
+  if(!total){ toast('Informe a quantidade vendida.',false); return; }
+  if(!preco){ toast('Informe o preço de venda.',false); return; }
+  if(!data){ toast('Informe a data.',false); return; }
+
+  setLoading('btn-salvar-avulsa', true);
+  try {
+    await garantirClienteAvulso();
+
+    const obj = {
+      id: uid(), clienteId: AVULSA_ID, data: data.slice(0,10),
+      vendidos: total, repostos: 0, estoqueAntes: 0, estoqueDepois: 0,
+      valor: preco*total, recebido: preco*total, preco,
+      custoUnitario: custo,
+      obs: obs ? `🛍️ ${obs}` : '🛍️ Venda avulsa',
+      sabores: {brigadeiro:bv, ninho:nv, ninhoNutella:nnv},
+      saboresRepostos: {brigadeiro:0, ninho:0, ninhoNutella:0}
+    };
+    const dbObj = {
+      id:obj.id, cliente_id:AVULSA_ID, data:obj.data,
+      vendidos:total, repostos:0, estoque_antes:0, estoque_depois:0,
+      valor:obj.valor, recebido:obj.valor, preco,
+      custo_unitario: custo,
+      obs:obj.obs,
+      sabores:obj.sabores, sabores_repostos:obj.saboresRepostos
+    };
+
+    await sbInsert('bc_visitas', dbObj);
+    visitas.push(obj);
+    toast('Venda avulsa registrada!');
+    fecharVendaAvulsa();
+    renderDashboard();
+  } catch(e){
+    toast('Erro: '+e.message, false);
+  }
+  setLoading('btn-salvar-avulsa', false);
+}
+
 function abrirEditarInicial(clienteId){
   const c = clientes.find(x=>x.id===clienteId);
   if(!c){ toast('Cliente não encontrado.',false); return; }
@@ -1951,6 +2127,11 @@ function carregarCusto(){
   } catch(e){}
 }
 function custoVisita(v){
+  // Se a visita tem custo unitário próprio (ex: venda avulsa), usa ele
+  if(v.custoUnitario > 0){
+    return totalVendidosVisita(v) * v.custoUnitario;
+  }
+  // Senão usa o custo global configurado nos relatórios
   if(!v.sabores) return custos.brigadeiro * (+v.vendidos||0);
   return (v.sabores.brigadeiro||0)*custos.brigadeiro
        + (v.sabores.ninho||0)*custos.ninho
