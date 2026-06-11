@@ -20,7 +20,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 .shell{display:flex;min-height:100vh}
-.sidebar{width:220px;background:var(--surface);border-right:.5px solid var(--border);padding:1.5rem 1rem;display:flex;flex-direction:column;gap:4px;position:fixed;top:0;left:0;height:100vh;z-index:10}
+.sidebar{width:220px;background:var(--surface);border-right:.5px solid var(--border);padding:1.5rem 1rem;display:flex;flex-direction:column;gap:4px;position:fixed;top:0;left:0;height:100vh;z-index:10;overflow-y:auto;overflow-x:hidden}
 .sidebar-logo{font-size:17px;font-weight:600;color:var(--amber);padding:.5rem .75rem 1.25rem;display:flex;align-items:center;gap:8px}
 .nav-btn{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:var(--radius);border:none;background:transparent;color:var(--text2);font-size:14px;cursor:pointer;width:100%;text-align:left;font-family:inherit;transition:all .15s}
 .nav-btn:hover{background:var(--surface2);color:var(--text)}
@@ -122,7 +122,38 @@ input[readonly]{background:var(--surface2);opacity:.8}
 .loading-overlay{position:fixed;inset:0;background:rgba(250,249,247,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:12px}
 .spinner{width:32px;height:32px;border:3px solid var(--border-md);border-top-color:var(--amber);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-/* ── TABLET (641px – 1024px) ─────────────────────────────────── */
+/* ── KANBAN ──────────────────────────────────────────────────── */
+.kanban-board{display:flex;gap:12px;overflow-x:auto;padding-bottom:1rem;align-items:flex-start}
+.kanban-col{flex:0 0 210px;background:var(--surface2);border-radius:12px;padding:10px;min-height:200px}
+.kanban-col-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:0 2px}
+.kanban-col-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px}
+.kanban-count{background:var(--surface);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;color:var(--text2)}
+.kanban-card{background:var(--surface);border-radius:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer;border:.5px solid var(--border);transition:transform .15s,box-shadow .15s;position:relative}
+.kanban-card:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.1)}
+.kanban-card.dragging{opacity:.5;transform:rotate(2deg)}
+.kanban-col.drag-over{background:rgba(167,108,42,.1);border:1.5px dashed var(--amber)}
+.kanban-card-nome{font-size:13px;font-weight:600;margin-bottom:4px;color:var(--text)}
+.kanban-card-sub{font-size:11px;color:var(--text3);line-height:1.5}
+.kanban-card-badges{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+.k-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px}
+.k-badge.amostra{background:rgba(167,108,42,.15);color:var(--amber)}
+.k-badge.dias{background:var(--surface2);color:var(--text3)}
+.kanban-add{width:100%;background:none;border:1.5px dashed var(--border);border-radius:8px;padding:8px;color:var(--text3);font-size:12px;cursor:pointer;transition:border-color .2s,color .2s}
+.kanban-add:hover{border-color:var(--amber);color:var(--amber)}
+.col-identificado .kanban-col-title{color:#6b6659}
+.col-visitado    .kanban-col-title{color:#1856a0}
+.col-contato     .kanban-col-title{color:#7b3f8c}
+.col-amostra     .kanban-col-title{color:var(--amber)}
+.col-proposta    .kanban-col-title{color:var(--teal)}
+.col-fechado     .kanban-col-title{color:#0d6e52}
+.col-perdido     .kanban-col-title{color:var(--coral)}
+.col-identificado{border-top:3px solid #9c9484}
+.col-visitado    {border-top:3px solid #1856a0}
+.col-contato     {border-top:3px solid #7b3f8c}
+.col-amostra     {border-top:3px solid var(--amber)}
+.col-proposta    {border-top:3px solid var(--teal)}
+.col-fechado     {border-top:3px solid #0d6e52}
+.col-perdido     {border-top:3px solid var(--coral)}
 @media(min-width:641px) and (max-width:1024px){
   /* Sidebar vira barra inferior fixa */
   .shell{flex-direction:column}
@@ -132,11 +163,16 @@ input[readonly]{background:var(--surface2);opacity:.8}
     border-right:none; border-top:.5px solid var(--border);
     z-index:50; background:var(--surface);
     box-shadow:0 -4px 24px rgba(0,0,0,.08);
+    overflow-x:auto; overflow-y:hidden;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
   }
+  .sidebar::-webkit-scrollbar{display:none}
   .sidebar-logo{display:none}
   .nav-btn{
-    flex:1; flex-direction:column; gap:3px;
-    font-size:10px; padding:8px 4px;
+    flex:0 0 auto; min-width:62px;
+    flex-direction:column; gap:3px;
+    font-size:10px; padding:8px 6px;
     border-radius:10px;
   }
   .nav-btn i{ font-size:20px; }
@@ -194,11 +230,16 @@ input[readonly]{background:var(--surface2);opacity:.8}
     border-right:none; border-top:.5px solid var(--border);
     z-index:50; background:var(--surface);
     box-shadow:0 -4px 20px rgba(0,0,0,.08);
+    overflow-x:auto; overflow-y:hidden;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
   }
+  .sidebar::-webkit-scrollbar{display:none}
   .sidebar-logo{display:none}
   .nav-btn{
-    flex:1; flex-direction:column; gap:2px;
-    font-size:10px; padding:6px 2px;
+    flex:0 0 auto; min-width:54px;
+    flex-direction:column; gap:2px;
+    font-size:9px; padding:6px 4px;
     border-radius:8px;
   }
   .nav-btn i{ font-size:18px; }
@@ -223,6 +264,7 @@ input[readonly]{background:var(--surface2);opacity:.8}
     <button class="nav-btn" onclick="abrirVendaAvulsa()" id="nav-avulsa" style="color:var(--amber)"><i class="ti ti-shopping-bag"></i><span>Venda Avulsa</span></button>
     <button class="nav-btn" onclick="showPage('visitas')" id="nav-visitas"><i class="ti ti-calendar-check"></i><span>Histórico</span></button>
     <button class="nav-btn" onclick="showPage('relatorios')" id="nav-relatorios"><i class="ti ti-chart-line"></i><span>Relatórios</span></button>
+    <button class="nav-btn" onclick="showPage('prospeccao')" id="nav-prospeccao"><i class="ti ti-target"></i><span>Prospecção</span></button>
   </nav>
 
   <main class="main">
@@ -407,7 +449,80 @@ input[readonly]{background:var(--surface2);opacity:.8}
       </div>
     </div>
 
+    <!-- PROSPECÇÃO -->
+    <div id="page-prospeccao" class="page">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px">
+        <div class="page-title" style="margin-bottom:0">Prospecção</div>
+        <button class="btn primary" onclick="abrirNovoProspecto()"><i class="ti ti-plus"></i> Novo prospect</button>
+      </div>
+      <div class="kanban-board" id="kanban-board"></div>
+    </div>
+
   </main>
+</div>
+
+<!-- MODAL PROSPECT -->
+<div id="modal-prospecto" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;overflow-y:auto;padding:24px 12px">
+  <div style="background:var(--surface);border-radius:var(--radius-lg);max-width:520px;margin:0 auto;padding:1.5rem;box-shadow:0 8px 40px rgba(0,0,0,.18)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
+      <h2 style="font-size:17px;font-weight:700" id="prospecto-modal-title"><i class="ti ti-target" style="color:var(--amber)"></i> Novo prospect</h2>
+      <button onclick="fecharProspecto()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:20px">✕</button>
+    </div>
+    <input type="hidden" id="p-id">
+
+    <div class="row">
+      <div class="field" style="flex:2"><label>Nome do local *</label><input type="text" id="p-nome" placeholder="Ex: Padaria Central"></div>
+      <div class="field"><label>Status</label>
+        <select id="p-status">
+          <option value="identificado">🆕 Identificado</option>
+          <option value="visitado">🚶 Visitado</option>
+          <option value="contato">💬 Contato feito</option>
+          <option value="amostra">🍫 Amostra deixada</option>
+          <option value="proposta">🤝 Proposta</option>
+          <option value="fechado">✅ Fechado</option>
+          <option value="perdido">❌ Perdido</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field"><label>Responsável / com quem falou</label><input type="text" id="p-responsavel" placeholder="Ex: João, dono"></div>
+      <div class="field"><label>Telefone / WhatsApp</label><input type="text" id="p-telefone" placeholder="(44) 99999-9999"></div>
+    </div>
+
+    <div class="row">
+      <div class="field" style="flex:2"><label>Endereço</label><input type="text" id="p-endereco" placeholder="Rua, número"></div>
+      <div class="field"><label>Bairro</label><input type="text" id="p-bairro" placeholder="Bairro"></div>
+    </div>
+
+    <div class="row">
+      <div class="field"><label>Data do contato</label><input type="date" id="p-data"></div>
+      <div class="field" style="justify-content:flex-end">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding-top:20px">
+          <input type="checkbox" id="p-amostra" style="width:16px;height:16px;accent-color:var(--amber)">
+          <span style="font-size:13px;font-weight:500">🍫 Deixou amostra</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="field"><label>Observações / próximos passos</label>
+      <textarea id="p-obs" placeholder="Ex: Voltar semana que vem, pedir por Marcos..." style="height:80px"></textarea>
+    </div>
+
+    <div id="p-converter-wrap" style="display:none;background:rgba(13,110,82,.08);border:1px solid rgba(13,110,82,.2);border-radius:var(--radius);padding:.75rem;margin-bottom:.85rem">
+      <div style="font-size:13px;font-weight:600;color:var(--teal);margin-bottom:6px"><i class="ti ti-circle-check"></i> Prospect fechado!</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:8px">Quer converter este prospect em cliente ativo?</div>
+      <button class="btn small" style="background:var(--teal);color:#fff" onclick="converterEmCliente()"><i class="ti ti-user-plus"></i> Converter em cliente</button>
+    </div>
+
+    <div class="actions">
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="fecharProspecto()"><i class="ti ti-x"></i> Cancelar</button>
+        <button class="btn danger" id="btn-del-prospecto" onclick="deletarProspecto()" style="display:none"><i class="ti ti-trash"></i></button>
+      </div>
+      <button class="btn primary" id="btn-salvar-prospecto" onclick="salvarProspecto()"><i class="ti ti-check"></i> Salvar</button>
+    </div>
+  </div>
 </div>
 
 <!-- MODAL VENDA AVULSA -->
@@ -819,6 +934,7 @@ async function loadData(){
     const [cRows, vRows] = await Promise.all([sbGet('bc_clientes'), sbGet('bc_visitas')]);
     clientes = cRows.map(dbToCliente);
     visitas  = vRows.map(dbToVisita);
+    await loadProspectos();
     console.log('Clientes carregados:', clientes.length, '| Visitas carregadas:', visitas.length);
   } catch(e){
     toast('Erro ao carregar dados: '+e.message, false);
@@ -1686,6 +1802,192 @@ function gerarComprovante(visitaId){
   win.document.close();
 }
 
+// ─── PROSPECÇÃO ──────────────────────────────────────────────────
+let prospectos = [];
+
+const KANBAN_COLS = [
+  {id:'identificado', label:'🆕 Identificado',  cls:'col-identificado'},
+  {id:'visitado',     label:'🚶 Visitado',       cls:'col-visitado'},
+  {id:'contato',      label:'💬 Contato feito',  cls:'col-contato'},
+  {id:'amostra',      label:'🍫 Amostra deixada',cls:'col-amostra'},
+  {id:'proposta',     label:'🤝 Proposta',        cls:'col-proposta'},
+  {id:'fechado',      label:'✅ Fechado',          cls:'col-fechado'},
+  {id:'perdido',      label:'❌ Perdido',           cls:'col-perdido'},
+];
+
+async function loadProspectos(){
+  try {
+    const rows = await sbGet('bc_prospectos');
+    prospectos = rows.map(r=>({
+      id:r.id, nome:r.nome, responsavel:r.responsavel||'',
+      telefone:r.telefone||'', endereco:r.endereco||'', bairro:r.bairro||'',
+      status:r.status||'identificado', amostra:!!r.amostra,
+      obs:r.obs||'', dataContato:r.data_contato||''
+    }));
+  } catch(e){ console.warn('Prospectos:', e); }
+}
+
+function renderKanban(){
+  const board = document.getElementById('kanban-board');
+  board.innerHTML = KANBAN_COLS.map(col=>{
+    const cards = prospectos.filter(p=>p.status===col.id);
+    return `<div class="kanban-col ${col.cls}" data-col="${col.id}"
+      ondragover="onDragOver(event)" ondrop="onDrop(event,\'${col.id}\')"
+      ondragleave="onDragLeave(event)">
+      <div class="kanban-col-header">
+        <span class="kanban-col-title">${col.label}</span>
+        <span class="kanban-count">${cards.length}</span>
+      </div>
+      ${cards.map(p=>kanbanCard(p)).join('')}
+      <button class="kanban-add" onclick="abrirNovoProspecto('${col.id}')"><i class="ti ti-plus"></i> Adicionar</button>
+    </div>`;
+  }).join('');
+}
+
+function kanbanCard(p){
+  const dias = p.dataContato ? Math.floor((new Date()-new Date(p.dataContato+'T12:00:00'))/(1000*60*60*24)) : null;
+  return `<div class="kanban-card" draggable="true"
+    ondragstart="onDragStart(event,'${p.id}')"
+    ondragend="onDragEnd(event)"
+    onclick="abrirEditarProspecto('${p.id}')">
+    <div class="kanban-card-nome">${p.nome}</div>
+    <div class="kanban-card-sub">
+      ${p.responsavel?`<span>👤 ${p.responsavel}</span><br>`:''}
+      ${p.telefone?`<span>📱 ${p.telefone}</span>`:''}
+    </div>
+    <div class="kanban-card-badges">
+      ${p.amostra?`<span class="k-badge amostra">🍫 Amostra</span>`:''}
+      ${dias!==null?`<span class="k-badge dias">${dias===0?'Hoje':dias===1?'Ontem':dias+'d atrás'}</span>`:''}
+    </div>
+  </div>`;
+}
+
+// Drag & Drop
+let dragId = null;
+function onDragStart(e, id){ dragId=id; e.target.classList.add('dragging'); }
+function onDragEnd(e){ e.target.classList.remove('dragging'); }
+function onDragOver(e){ e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+function onDragLeave(e){ e.currentTarget.classList.remove('drag-over'); }
+async function onDrop(e, novoStatus){
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if(!dragId) return;
+  const p = prospectos.find(x=>x.id===dragId);
+  if(!p || p.status===novoStatus) return;
+  p.status = novoStatus;
+  try { await sbUpdate('bc_prospectos', p.id, {status:novoStatus}); } catch(err){}
+  renderKanban();
+  dragId = null;
+}
+
+// Modal
+function abrirNovoProspecto(status='identificado'){
+  document.getElementById('p-id').value         = '';
+  document.getElementById('p-nome').value        = '';
+  document.getElementById('p-responsavel').value = '';
+  document.getElementById('p-telefone').value    = '';
+  document.getElementById('p-endereco').value    = '';
+  document.getElementById('p-bairro').value      = '';
+  document.getElementById('p-status').value      = status;
+  document.getElementById('p-data').value        = todayLocal();
+  document.getElementById('p-amostra').checked   = false;
+  document.getElementById('p-obs').value         = '';
+  document.getElementById('prospecto-modal-title').innerHTML = '<i class="ti ti-target" style="color:var(--amber)"></i> Novo prospect';
+  document.getElementById('btn-del-prospecto').style.display = 'none';
+  document.getElementById('p-converter-wrap').style.display  = 'none';
+  document.getElementById('modal-prospecto').style.display   = 'block';
+  setTimeout(()=>document.getElementById('p-nome').focus(), 100);
+}
+function abrirEditarProspecto(id){
+  const p = prospectos.find(x=>x.id===id);
+  if(!p) return;
+  document.getElementById('p-id').value         = p.id;
+  document.getElementById('p-nome').value        = p.nome;
+  document.getElementById('p-responsavel').value = p.responsavel;
+  document.getElementById('p-telefone').value    = p.telefone;
+  document.getElementById('p-endereco').value    = p.endereco;
+  document.getElementById('p-bairro').value      = p.bairro;
+  document.getElementById('p-status').value      = p.status;
+  document.getElementById('p-data').value        = p.dataContato||todayLocal();
+  document.getElementById('p-amostra').checked   = p.amostra;
+  document.getElementById('p-obs').value         = p.obs;
+  document.getElementById('prospecto-modal-title').innerHTML = '<i class="ti ti-target" style="color:var(--amber)"></i> Editar prospect';
+  document.getElementById('btn-del-prospecto').style.display = 'block';
+  document.getElementById('p-converter-wrap').style.display  = p.status==='fechado' ? 'block' : 'none';
+  document.getElementById('modal-prospecto').style.display   = 'block';
+}
+function fecharProspecto(){
+  document.getElementById('modal-prospecto').style.display = 'none';
+}
+
+// Mudar status atualiza botão converter
+document.addEventListener('change', e=>{
+  if(e.target.id==='p-status'){
+    document.getElementById('p-converter-wrap').style.display = e.target.value==='fechado'?'block':'none';
+  }
+});
+
+async function salvarProspecto(){
+  const nome = document.getElementById('p-nome').value.trim();
+  if(!nome){ toast('Informe o nome do local.',false); return; }
+  const id = document.getElementById('p-id').value || uid();
+  const obj = {
+    id, nome,
+    responsavel: document.getElementById('p-responsavel').value,
+    telefone:    document.getElementById('p-telefone').value,
+    endereco:    document.getElementById('p-endereco').value,
+    bairro:      document.getElementById('p-bairro').value,
+    status:      document.getElementById('p-status').value,
+    amostra:     document.getElementById('p-amostra').checked,
+    obs:         document.getElementById('p-obs').value,
+    dataContato: document.getElementById('p-data').value,
+  };
+  const dbObj = {
+    id, nome:obj.nome, responsavel:obj.responsavel, telefone:obj.telefone,
+    endereco:obj.endereco, bairro:obj.bairro, status:obj.status,
+    amostra:obj.amostra, obs:obj.obs, data_contato:obj.dataContato||null
+  };
+  setLoading('btn-salvar-prospecto', true);
+  try {
+    const existe = prospectos.find(x=>x.id===id);
+    if(existe){ await sbUpdate('bc_prospectos', id, dbObj); Object.assign(existe, obj); }
+    else { await sbInsert('bc_prospectos', dbObj); prospectos.push(obj); }
+    toast('Prospect salvo!');
+    fecharProspecto();
+    renderKanban();
+  } catch(e){ toast('Erro: '+e.message, false); }
+  setLoading('btn-salvar-prospecto', false);
+}
+
+async function deletarProspecto(){
+  const id = document.getElementById('p-id').value;
+  if(!id) return;
+  if(!confirm('Remover este prospect?')) return;
+  try {
+    await fetch(`${SB_URL}/rest/v1/bc_prospectos?id=eq.${id}`,{method:'DELETE',headers:HEADERS});
+    prospectos = prospectos.filter(x=>x.id!==id);
+    fecharProspecto();
+    renderKanban();
+    toast('Prospect removido.');
+  } catch(e){ toast('Erro: '+e.message, false); }
+}
+
+function converterEmCliente(){
+  const p = prospectos.find(x=>x.id===document.getElementById('p-id').value);
+  if(!p) return;
+  fecharProspecto();
+  // Pré-preenche modal de cliente com dados do prospect
+  openClientModal();
+  setTimeout(()=>{
+    document.getElementById('c-nome').value        = p.nome;
+    document.getElementById('c-responsavel').value = p.responsavel;
+    document.getElementById('c-telefone').value    = p.telefone;
+    document.getElementById('c-endereco').value    = p.endereco;
+    document.getElementById('c-bairro').value      = p.bairro;
+  }, 100);
+  toast('Dados preenchidos! Complete o cadastro do cliente. 🍫');
+}
+
 // ─── VENDA AVULSA ────────────────────────────────────────────────
 const AVULSA_ID = '__venda_avulsa__';
 
@@ -2186,13 +2488,14 @@ function showPage(p){
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
-  const nm={dashboard:'dashboard',clientes:'clientes',perfil:'clientes','nova-visita':'nova-visita',visitas:'visitas',relatorios:'relatorios'};
+  const nm={dashboard:'dashboard',clientes:'clientes',perfil:'clientes','nova-visita':'nova-visita',visitas:'visitas',relatorios:'relatorios',prospeccao:'prospeccao'};
   const nid=nm[p]; if(nid)document.getElementById('nav-'+nid).classList.add('active');
   if(p==='clientes')renderClientes();
   if(p==='visitas'){populateClientSelect();renderVisitas();}
   if(p==='dashboard')renderDashboard();
   if(p==='nova-visita')populateClientSelect();
   if(p==='relatorios'){carregarCusto();renderRelatorios();}
+  if(p==='prospeccao'){renderKanban();}
 }
 
 // ─── RELATÓRIOS ──────────────────────────────────────────────────
