@@ -154,102 +154,50 @@ input[readonly]{background:var(--surface2);opacity:.8}
 .col-proposta    {border-top:3px solid var(--teal)}
 .col-fechado     {border-top:3px solid #0d6e52}
 .col-perdido     {border-top:3px solid var(--coral)}
-@media(min-width:641px) and (max-width:1024px){
-  /* Sidebar vira barra inferior fixa */
-  .shell{flex-direction:column}
+/* ── TABLET & MOBILE (≤1024px) ───────────────────────────────── */
+@media(max-width:1024px){
+  .shell{ flex-direction:column; }
   .sidebar{
-    width:100%; height:auto; position:fixed; bottom:0; left:0; right:0; top:auto;
-    flex-direction:row; padding:6px 8px; gap:2px;
-    border-right:none; border-top:.5px solid var(--border);
-    z-index:50; background:var(--surface);
-    box-shadow:0 -4px 24px rgba(0,0,0,.08);
-    overflow-x:auto; overflow-y:hidden;
-    -webkit-overflow-scrolling:touch;
-    scrollbar-width:none;
-    touch-action:pan-x;
+    position:fixed; top:0; left:-260px; width:260px; height:100vh;
+    z-index:200; transition:left .25s ease;
+    box-shadow:none; padding-top:1rem;
+    flex-direction:column; overflow-y:auto;
   }
-  .sidebar::-webkit-scrollbar{display:none}
-  .sidebar-logo{display:none}
+  .sidebar.open{
+    left:0;
+    box-shadow:4px 0 32px rgba(0,0,0,.2);
+  }
+  .sidebar-logo{ font-size:16px; padding:.5rem .75rem 1rem; display:flex; }
   .nav-btn{
-    flex:0 0 auto; min-width:62px;
-    flex-direction:column; gap:3px;
-    font-size:10px; padding:8px 6px;
-    border-radius:10px;
-    touch-action:manipulation;
+    font-size:15px; padding:13px 16px; gap:12px; width:100%;
+    touch-action:manipulation; -webkit-tap-highlight-color:transparent;
   }
   .nav-btn i{ font-size:20px; }
-  .nav-btn span{ font-size:10px; display:block; }
-  .main{
-    margin-left:0;
-    padding:1.25rem 1rem 90px; /* espaço para nav inferior */
-    max-width:100%;
+  .nav-btn span{ display:block; font-size:14px; }
+  #sidebar-overlay{
+    display:none; position:fixed; inset:0;
+    background:rgba(0,0,0,.45); z-index:199;
   }
-
-  /* Cards e grids */
-  .metrics{ grid-template-columns: repeat(3,1fr); gap:10px; }
-  .metric{ padding:14px 12px; }
-  .metric .val{ font-size:22px; }
-
-  /* Grids de 2 colunas viram 1 no tablet estreito */
-  .sabores-grid{ grid-template-columns: repeat(3,1fr); gap:10px; }
-
-  /* Inputs maiores para toque */
-  input, select, textarea{
-    font-size:16px !important; /* evita zoom no iOS */
-    padding:11px 13px;
-    min-height:46px;
+  #sidebar-overlay.open{ display:block; }
+  #menu-toggle{
+    display:flex; align-items:center; justify-content:center;
+    position:fixed; top:12px; left:12px; z-index:198;
+    width:46px; height:46px; border-radius:12px;
+    background:var(--surface); border:.5px solid var(--border);
+    box-shadow:0 2px 12px rgba(0,0,0,.12);
+    cursor:pointer; font-size:22px; color:var(--amber);
+    touch-action:manipulation; -webkit-tap-highlight-color:transparent;
   }
+  .main{ margin-left:0; padding:68px 1rem 2rem; max-width:100%; }
+  input, select, textarea{ font-size:16px !important; padding:11px 13px; min-height:46px; }
   .btn{ padding:11px 18px; font-size:14px; min-height:44px; }
-  .btn.small{ padding:8px 12px; font-size:13px; min-height:38px; }
-
-  /* Cards de cliente */
-  .client-card{ padding:1rem; }
-  .client-footer{ gap:8px; flex-wrap:wrap; }
-  .client-footer .btn.small{ flex:1; justify-content:center; min-width:80px; }
-
-  /* Modais ocupam mais largura */
-  [id^="modal-"] > div{ max-width:92vw !important; }
-
-  /* Relatórios: gráficos em coluna */
-  #page-relatorios [style*="grid-template-columns:1fr 1fr"]{
-    grid-template-columns:1fr !important;
-  }
-
-  /* Título da página */
-  .page-title{ font-size:20px; }
-
-  /* Route cards maiores */
-  .route-card{ padding:12px 14px; }
-  .check{ width:28px; height:28px; }
-}
-
-/* ── MOBILE (≤640px) ─────────────────────────────────────────── */
-@media(max-width:640px){
-  .shell{flex-direction:column}
-  .sidebar{
-    width:100%; height:auto; position:fixed; bottom:0; left:0; right:0; top:auto;
-    flex-direction:row; padding:4px 6px; gap:2px;
-    border-right:none; border-top:.5px solid var(--border);
-    z-index:50; background:var(--surface);
-    box-shadow:0 -4px 20px rgba(0,0,0,.08);
-    overflow-x:auto; overflow-y:hidden;
-    -webkit-overflow-scrolling:touch;
-    scrollbar-width:none;
-    touch-action:pan-x;
-  }
-  .sidebar::-webkit-scrollbar{display:none}
-  .sidebar-logo{display:none}
-  .nav-btn{
-    flex:0 0 auto; min-width:54px;
-    flex-direction:column; gap:2px;
-    font-size:9px; padding:6px 4px;
-    border-radius:8px;
-    touch-action:manipulation;
-  }
-  .nav-btn i{ font-size:18px; }
-  .nav-btn span{ font-size:9px; display:block; }
-  .main{ margin-left:0; padding:1rem 0.75rem 80px; max-width:100%; }
-  input, select, textarea{ font-size:16px !important; }
+  .btn.small{ padding:9px 13px; font-size:13px; min-height:40px; }
+  .metrics{ grid-template-columns:repeat(2,1fr); gap:10px; }
+  .sabores-grid{ grid-template-columns:1fr; gap:10px; }
+  [id^="modal-"] > div{ max-width:96vw !important; }
+  #page-relatorios [style*="grid-template-columns:1fr 1fr"]{ grid-template-columns:1fr !important; }
+  .kanban-board{ gap:10px; }
+  .kanban-col{ flex:0 0 185px; }
 }
 </style>
 </head>
@@ -258,6 +206,11 @@ input[readonly]{background:var(--surface2);opacity:.8}
   <div class="spinner"></div>
   <div style="font-size:14px;color:var(--text2)">Carregando dados...</div>
 </div>
+
+<div id="sidebar-overlay" onclick="fecharMenu()"></div>
+<button id="menu-toggle" onclick="abrirMenu()" style="display:none">
+  <i class="ti ti-menu-2"></i>
+</button>
 
 <div class="shell">
   <nav class="sidebar">
@@ -2785,6 +2738,30 @@ function renderRelatorios(){
     </div>
     <div style="font-size:11px;color:var(--text3);text-align:center">Baseado no ritmo atual de ${ritmoVend.toFixed(1)} brownies/dia</div>
   `;
+}
+
+// ─── MENU MOBILE ─────────────────────────────────────────────────
+function abrirMenu(){
+  document.querySelector('.sidebar').classList.add('open');
+  document.getElementById('sidebar-overlay').classList.add('open');
+}
+function fecharMenu(){
+  document.querySelector('.sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+}
+function checkMenuToggle(){
+  const btn = document.getElementById('menu-toggle');
+  if(window.innerWidth <= 1024){ btn.style.display='flex'; }
+  else { btn.style.display='none'; fecharMenu(); }
+}
+window.addEventListener('resize', checkMenuToggle);
+checkMenuToggle();
+
+// Fechar menu ao navegar
+const _origShowPage = showPage;
+function showPage(p){
+  fecharMenu();
+  _origShowPage(p);
 }
 
 loadData();
