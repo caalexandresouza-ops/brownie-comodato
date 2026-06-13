@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Brownie Comodato</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.8.0/dist/tabler-icons.min.css">
 <style>
@@ -323,6 +326,12 @@ input[readonly]{background:var(--surface2);opacity:.8}
         <h3 style="font-size:14px;font-weight:600;margin-bottom:.85rem;color:var(--text)"><i class="ti ti-cash" style="font-size:16px;vertical-align:-2px;margin-right:6px;color:var(--teal)"></i>Cobrança</h3>
         <div class="row">
           <div class="field"><label>Meu preço por brownie (R$) <span style="font-size:10px;color:var(--amber);font-weight:600">← vem do cadastro</span></label><input type="number" id="v-preco" min="0" step="0.01" placeholder="0,00" oninput="calcVisita()" style="border-color:var(--amber)"></div>
+          <div class="field"><label>Modelo de cobrança</label>
+            <select id="v-modelo" onchange="calcVisita()" style="border-color:var(--amber)">
+              <option value="repostos">💰 Paga pelo que repõe</option>
+              <option value="vendidos">📦 Paga pelo que vendeu</option>
+            </select>
+          </div>
           <div class="field"><label>Valor cobrado (R$)</label><input type="number" id="v-valor" min="0" step="0.01" placeholder="0,00"></div>
           <div class="field"><label>Valor recebido (R$)</label><input type="number" id="v-recebido" min="0" step="0.01" placeholder="0,00"></div>
         </div>
@@ -695,6 +704,13 @@ input[readonly]{background:var(--surface2);opacity:.8}
     <h3 style="font-size:14px;font-weight:600;margin-bottom:.85rem"><i class="ti ti-cash" style="color:var(--teal)"></i> Cobrança</h3>
     <div class="row">
       <div class="field"><label>Preço por brownie (R$)</label><input type="number" id="ev-preco" min="0" step="0.01" placeholder="0,00" oninput="calcEditVisita()"></div>
+      <div class="field"><label>Modelo de cobrança</label>
+        <select id="ev-modelo" onchange="calcEditVisita()">
+          <option value="repostos">💰 Paga pelo que repõe</option>
+          <option value="vendidos">📦 Paga pelo que vendeu</option>
+        </select>
+      </div>
+    </div>
       <div class="field"><label>Valor cobrado (R$)</label><input type="number" id="ev-valor" min="0" step="0.01" placeholder="0,00"></div>
       <div class="field"><label>Valor recebido (R$)</label><input type="number" id="ev-recebido" min="0" step="0.01" placeholder="0,00"></div>
     </div>
@@ -770,6 +786,8 @@ input[readonly]{background:var(--surface2);opacity:.8}
     <div class="row">
       <div class="field"><label>Meu preço de venda (R$)</label><input type="number" id="c-preco-venda" min="0" step="0.01" placeholder="Ex: 5,00" title="Quanto você cobra deste cliente por brownie"></div>
       <div class="field"><label>Preço de revenda do cliente (R$)</label><input type="number" id="c-preco-revenda" min="0" step="0.01" placeholder="Ex: 8,00" title="Quanto o cliente cobra dos consumidores"></div>
+    </div>
+    <div class="row">
       <div class="field"><label>Dia preferencial</label>
         <select id="c-dia">
           <option value="">Qualquer dia</option>
@@ -788,6 +806,20 @@ input[readonly]{background:var(--surface2);opacity:.8}
         Este cliente requer Nota Fiscal (NF)
       </label>
       <div style="font-size:11px;color:var(--text3);margin-top:4px;margin-left:28px">Marque se o cliente precisa de NF a cada venda</div>
+    </div>
+
+    <div style="margin-bottom:.85rem">
+      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text)">Modelo de cobrança</label>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-radius:var(--radius);border:2px solid var(--amber);cursor:pointer;flex:1;min-width:160px;background:rgba(167,108,42,.06)" id="label-repostos">
+          <input type="radio" name="c-modelo-cobranca" id="c-modelo-cobranca" value="repostos" style="accent-color:var(--amber);width:16px;height:16px" onchange="document.getElementById('label-repostos').style.borderColor='var(--amber)';document.getElementById('label-vendidos').style.borderColor='var(--border)'">
+          <span style="font-size:13px;font-weight:500">💰 Paga pelo que <strong>repõe</strong></span>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-radius:var(--radius);border:2px solid var(--border);cursor:pointer;flex:1;min-width:160px" id="label-vendidos">
+          <input type="radio" name="c-modelo-cobranca" value="vendidos" style="accent-color:var(--amber);width:16px;height:16px" onchange="document.getElementById('label-vendidos').style.borderColor='var(--amber)';document.getElementById('label-repostos').style.borderColor='var(--border)'">
+          <span style="font-size:13px;font-weight:500">📦 Paga pelo que <strong>vendeu</strong></span>
+        </label>
+      </div>
     </div>
 
     <div class="field" style="margin-bottom:1rem"><label>Observações</label>
@@ -853,6 +885,7 @@ function dbToCliente(r){
     dataInicio:r.data_inicio||null,
     obs:r.obs||'',status:r.status||'ativo',diaVisita:r.dia_visita||'',
     precoVenda:r.preco_venda||0,precoRevenda:r.preco_revenda||0,
+    modeloCobranca:r.modelo_cobranca||'repostos',
     requerNf:!!r.requer_nf,
     criadoEm:r.criado_em};
 }
@@ -865,6 +898,7 @@ function clienteToDb(c, isNew=false){
     estoque_ninho:c.estoqueNinho||0,
     estoque_ninho_nutella:c.estoqueNN||0,
     obs:c.obs,status:c.status,dia_visita:c.diaVisita,preco_venda:c.precoVenda||0,preco_revenda:c.precoRevenda||0,
+    modelo_cobranca:c.modeloCobranca||'repostos',
     requer_nf:c.requerNf||false};
   // Inicial only saved once on creation
   if(isNew){
@@ -882,6 +916,7 @@ function dbToVisita(r){
     sabores:r.sabores||{brigadeiro:0,ninho:0,ninhoNutella:0},
     saboresRepostos:r.sabores_repostos||{brigadeiro:0,ninho:0,ninhoNutella:0},
     custoUnitario:r.custo_unitario||0,
+    modeloCobranca:r.modelo_cobranca||'repostos',
     criadoEm:r.criado_em};
 }
 
@@ -1190,6 +1225,7 @@ function renderClientes(){
         ${(c.estoqueNinho||0)>0?`<span class="badge amber" style="background:#fdf8e6;color:#8a6d10"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#c9a84c;margin-right:4px"></span>Ninho: ${c.estoqueNinho}</span>`:''}
         ${(c.estoqueNN||0)>0?`<span class="badge amber" style="background:#f5eefa;color:#7b3f8c"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#7b3f8c;margin-right:4px"></span>N.Nutella: ${c.estoqueNN}</span>`:''}
         ${c.precoVenda>0?`<span class="badge teal"><i class="ti ti-tag" style="font-size:12px"></i>vendo a ${fmtMoney(c.precoVenda)}</span>`:''}
+        ${c.modeloCobranca==='vendidos'?`<span class="badge blue"><i class="ti ti-package" style="font-size:12px"></i>paga pelo vendido</span>`:`<span class="badge amber"><i class="ti ti-refresh" style="font-size:12px"></i>paga pelo reposto</span>`}
         ${c.precoRevenda>0?`<span class="badge blue"><i class="ti ti-tag" style="font-size:12px"></i>revende a ${fmtMoney(c.precoRevenda)}</span>`:''}
         ${c.requerNf?`<span class="badge amber"><i class="ti ti-file-invoice" style="font-size:12px"></i>Requer NF</span>`:''}
         ${ult?`<span class="tag">Última visita: ${fmtDate(ult.data)}</span>`:'<span class="tag">Sem visitas</span>'}
@@ -1239,6 +1275,11 @@ function openClientModal(c=null){
    'c-est-brig','c-est-ninho','c-est-nn','c-ini-brig','c-ini-ninho','c-ini-nn','c-data-inicio',
    'c-preco-venda','c-preco-revenda','c-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const nfEl=document.getElementById('c-requer-nf'); if(nfEl) nfEl.checked=false;
+  const mcDefault=document.querySelector('input[name="c-modelo-cobranca"][value="repostos"]');
+  if(mcDefault){ mcDefault.checked=true;
+    document.getElementById('label-repostos').style.borderColor='var(--amber)';
+    document.getElementById('label-vendidos').style.borderColor='var(--border)';
+  }
   document.getElementById('c-status').value='ativo';
   document.getElementById('c-dia').value='';
   document.getElementById('modal-title').textContent=c?'Editar cliente':'Novo cliente';
@@ -1266,6 +1307,11 @@ function openClientModal(c=null){
     document.getElementById('c-ini-nn').value=c.inicialNN||0;
     document.getElementById('c-data-inicio').value=c.dataInicio||'';
     document.getElementById('c-preco-venda').value=c.precoVenda||'';
+    const mcEl=document.querySelector(`input[name="c-modelo-cobranca"][value="${c.modeloCobranca||'repostos'}"]`);
+    if(mcEl){ mcEl.checked=true;
+      document.getElementById('label-repostos').style.borderColor = c.modeloCobranca==='vendidos'?'var(--border)':'var(--amber)';
+      document.getElementById('label-vendidos').style.borderColor  = c.modeloCobranca==='vendidos'?'var(--amber)':'var(--border)';
+    }
     document.getElementById('c-preco-revenda').value=c.precoRevenda||'';
     document.getElementById('c-obs').value=c.obs||'';
     const nfEl=document.getElementById('c-requer-nf'); if(nfEl) nfEl.checked=!!c.requerNf;
@@ -1296,6 +1342,7 @@ async function salvarCliente(){
     dataInicio:document.getElementById('c-data-inicio').value||todayLocal(),
     precoVenda:+(document.getElementById('c-preco-venda').value)||0,
     precoRevenda:+(document.getElementById('c-preco-revenda').value)||0,
+    modeloCobranca:document.querySelector('input[name="c-modelo-cobranca"]:checked')?.value||'repostos',
     requerNf:document.getElementById('c-requer-nf')?.checked||false,
     obs:document.getElementById('c-obs').value,
     status:document.getElementById('c-status').value,diaVisita:document.getElementById('c-dia').value};
@@ -1390,6 +1437,11 @@ function onClienteChange(){
     const alertEl = document.getElementById('v-saldo-alerta');
     if(alertEl) alertEl.innerHTML='';
   }
+  // Preenche modelo de cobrança do cliente
+  if(c && c.modeloCobranca){
+    const mEl = document.getElementById('v-modelo');
+    if(mEl) mEl.value = c.modeloCobranca;
+  }
   calcSabores();
 }
 function calcSabores(){
@@ -1403,10 +1455,15 @@ function calcSabores(){
   calcVisita();
 }
 function calcVisita(){
-  const preco=+(document.getElementById('v-preco').value)||0;
-  const vendidos=+(document.getElementById('v-vendidos').value)||0;
-  if(preco>0 && vendidos>0){
-    document.getElementById('v-valor').value=(preco*vendidos).toFixed(2);
+  const preco    = +(document.getElementById('v-preco').value)||0;
+  const modelo   = (document.getElementById('v-modelo')||{}).value || 'repostos';
+  const repostos = (+(document.getElementById('s-brig-r').value)||0)
+                 + (+(document.getElementById('s-ninho-r').value)||0)
+                 + (+(document.getElementById('s-nn-r').value)||0);
+  const vendidos = +(document.getElementById('v-vendidos').value)||0;
+  const base = modelo === 'repostos' ? (repostos > 0 ? repostos : vendidos) : vendidos;
+  if(preco > 0 && base > 0){
+    document.getElementById('v-valor').value = (preco * base).toFixed(2);
   }
 }
 function clearVisita(){
@@ -1429,12 +1486,14 @@ async function salvarVisita(){
     valor:+(document.getElementById('v-valor').value)||0,
     recebido:+(document.getElementById('v-recebido').value)||0,
     preco:+(document.getElementById('v-preco').value)||0,
+    modeloCobranca:document.getElementById('v-modelo').value||'repostos',
     obs:document.getElementById('v-obs').value,
     sabores:{brigadeiro:bv,ninho:nv,ninhoNutella:nnv},
     saboresRepostos:{brigadeiro:br,ninho:nr,ninhoNutella:nnr}};
   const dbObj={id:obj.id,cliente_id:obj.clienteId,data:obj.data,vendidos:obj.vendidos,repostos:obj.repostos,
     estoque_antes:obj.estoqueAntes,estoque_depois:obj.estoqueDepois,valor:obj.valor,recebido:obj.recebido,
-    preco:obj.preco,obs:obj.obs,sabores:obj.sabores,sabores_repostos:obj.saboresRepostos};
+    preco:obj.preco,obs:obj.obs,sabores:obj.sabores,sabores_repostos:obj.saboresRepostos,
+    modelo_cobranca:obj.modeloCobranca};
 
   // 1. Salvar visita — se falhar, para aqui
   try {
@@ -2208,6 +2267,8 @@ function abrirEditarVisita(id){
   document.getElementById('ev-nn-r').value        = v.saboresRepostos?.ninhoNutella||0;
   document.getElementById('ev-estoque-antes').value = v.estoqueAntes||0;
   document.getElementById('ev-preco').value       = v.preco||'';
+  const evModelo = document.getElementById('ev-modelo');
+  if(evModelo) evModelo.value = v.modeloCobranca||'repostos';
   document.getElementById('ev-valor').value       = v.valor||'';
   document.getElementById('ev-recebido').value    = v.recebido||'';
   document.getElementById('ev-obs').value         = v.obs||'';
@@ -2238,9 +2299,16 @@ function calcEditSabores(){
   calcEditVisita();
 }
 function calcEditVisita(){
-  const preco = +(document.getElementById('ev-preco').value)||0;
-  const vend  = +(document.getElementById('ev-vendidos').value)||0;
-  if(preco>0 && vend>0) document.getElementById('ev-valor').value = (preco*vend).toFixed(2);
+  const preco    = +(document.getElementById('ev-preco').value)||0;
+  const modelo   = (document.getElementById('ev-modelo')||{}).value || 'repostos';
+  const repostos = (+(document.getElementById('ev-brig-r').value)||0)
+                 + (+(document.getElementById('ev-ninho-r').value)||0)
+                 + (+(document.getElementById('ev-nn-r').value)||0);
+  const vendidos = +(document.getElementById('ev-vendidos').value)||0;
+  const base = modelo === 'repostos' ? (repostos > 0 ? repostos : vendidos) : vendidos;
+  if(preco > 0 && base > 0){
+    document.getElementById('ev-valor').value = (preco * base).toFixed(2);
+  }
 }
 async function salvarEdicaoVisita(){
   const id         = document.getElementById('ev-id').value;
