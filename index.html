@@ -239,6 +239,17 @@ input[readonly]{background:var(--surface2);opacity:.8}
         <button class="ptab" onclick="setPeriod('mes_passado',this)">Mês passado</button>
         <button class="ptab" onclick="setPeriod('ano',this)">Este ano</button>
         <button class="ptab" onclick="setPeriod('todos',this)">Todos</button>
+        <button class="ptab" onclick="setPeriod('custom',this)">📅 Personalizado</button>
+      </div>
+      <div id="dash-custom-range" style="display:none;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:1rem">
+        <div class="field" style="margin-bottom:0;min-width:140px;max-width:180px">
+          <label>De</label>
+          <input type="date" id="dash-from" onchange="renderDashboard()">
+        </div>
+        <div class="field" style="margin-bottom:0;min-width:140px;max-width:180px">
+          <label>Até</label>
+          <input type="date" id="dash-to" onchange="renderDashboard()">
+        </div>
       </div>
       <div class="metrics" id="dash-metrics"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem">
@@ -400,6 +411,17 @@ input[readonly]{background:var(--surface2);opacity:.8}
         <button class="ptab" onclick="setRelPeriod('mes_passado',this)">Mês passado</button>
         <button class="ptab" onclick="setRelPeriod('ano',this)">Este ano</button>
         <button class="ptab" onclick="setRelPeriod('todos',this)">Todos</button>
+        <button class="ptab" onclick="setRelPeriod('custom',this)">📅 Personalizado</button>
+      </div>
+      <div id="rel-custom-range" style="display:none;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:1rem">
+        <div class="field" style="margin-bottom:0;min-width:140px;max-width:180px">
+          <label>De</label>
+          <input type="date" id="rel-from" onchange="renderRelatorios()">
+        </div>
+        <div class="field" style="margin-bottom:0;min-width:140px;max-width:180px">
+          <label>Até</label>
+          <input type="date" id="rel-to" onchange="renderRelatorios()">
+        </div>
       </div>
       <div class="metrics" id="rel-metrics" style="margin-bottom:1.25rem"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem">
@@ -420,7 +442,11 @@ input[readonly]{background:var(--surface2);opacity:.8}
     <div id="page-analise" class="page">
       <div class="page-title">Análise do negócio</div>
 
-      <!-- Estoque em campo -->
+      <!-- COMPARATIVO SEMANAL -->
+      <div class="card">
+        <h3><i class="ti ti-arrows-exchange"></i>Comparativo semanal — semana passada vs esta semana</h3>
+        <div id="analise-comparativo"></div>
+      </div>
       <div class="card">
         <h3><i class="ti ti-package"></i>Estoque em campo por cliente</h3>
         <div id="analise-estoque"></div>
@@ -1012,9 +1038,8 @@ function getWeekEnd(){
   const e=new Date(d.getFullYear(),d.getMonth(),diff);
   return `${e.getFullYear()}-${String(e.getMonth()+1).padStart(2,'0')}-${String(e.getDate()).padStart(2,'0')}`;
 }
-function getPeriodRange(p){
+function getPeriodRange(p, prefix='dash'){
   const now=new Date(),y=now.getFullYear(),m=now.getMonth();
-  const today=todayLocal();
   if(p==='semana') return {from:getWeekStart(),to:getWeekEnd()};
   if(p==='mes')    return {from:`${y}-${String(m+1).padStart(2,'0')}-01`,to:`${y}-${String(m+1).padStart(2,'0')}-${String(new Date(y,m+1,0).getDate()).padStart(2,'0')}`};
   if(p==='mes_passado'){
@@ -1022,17 +1047,30 @@ function getPeriodRange(p){
     return {from:`${py}-${String(pm+1).padStart(2,'0')}-01`,to:`${py}-${String(pm+1).padStart(2,'0')}-${ld}`};
   }
   if(p==='ano') return {from:`${y}-01-01`,to:`${y}-12-31`};
+  if(p==='custom'){
+    const fromEl=document.getElementById(prefix+'-from');
+    const toEl=document.getElementById(prefix+'-to');
+    const from=fromEl?fromEl.value:'';
+    const to=toEl?toEl.value:todayLocal();
+    return from ? {from, to:to||todayLocal()} : null;
+  }
   return null;
 }
-function filterByPeriod(list,p){
-  const r=getPeriodRange(p); if(!r)return list;
+function filterByPeriod(list,p,prefix='dash'){
+  const r=getPeriodRange(p,prefix); if(!r)return list;
   return list.filter(v=>v.data&&v.data>=r.from&&v.data<=r.to);
 }
-const periodLabels={semana:'esta semana',mes:'este mês',mes_passado:'mês passado',ano:'este ano',todos:'todos'};
+const periodLabels={semana:'esta semana',mes:'este mês',mes_passado:'mês passado',ano:'este ano',todos:'todos',custom:'período personalizado'};
 function setPeriod(p,btn){
   dashPeriod=p;
-  document.querySelectorAll('.ptab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#page-dashboard .ptab').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
+  const cr=document.getElementById('dash-custom-range');
+  if(cr) cr.style.display = p==='custom' ? 'flex' : 'none';
+  if(p==='custom'){
+    const f=document.getElementById('dash-from');
+    if(f&&!f.value){ f.value=getWeekStart(); document.getElementById('dash-to').value=todayLocal(); }
+  }
   renderDashboard();
 }
 
@@ -2639,6 +2677,12 @@ function setRelPeriod(p, btn){
   relPeriod = p;
   document.querySelectorAll('#page-relatorios .ptab').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
+  const cr=document.getElementById('rel-custom-range');
+  if(cr) cr.style.display = p==='custom' ? 'flex' : 'none';
+  if(p==='custom'){
+    const f=document.getElementById('rel-from');
+    if(f&&!f.value){ f.value=getWeekStart(); document.getElementById('rel-to').value=todayLocal(); }
+  }
   renderRelatorios();
 }
 
@@ -2742,10 +2786,10 @@ function drawPieChart(canvasId, labels, values, colors){
 
 function renderRelatorios(){
   carregarCusto();
-  const filtradas = filterByPeriod(visitas, relPeriod);
+  const filtradas = filterByPeriod(visitas, relPeriod, 'rel');
   const totalVend = filtradas.reduce((s,v)=>s+totalVendidosVisita(v),0);
 
-  const rangeRel = getPeriodRange(relPeriod);
+  const rangeRel = getPeriodRange(relPeriod, 'rel');
   const receita    = filtradas.reduce((s,v)=>s+(+v.recebido||0),0);
   const custoTotal = filtradas.reduce((s,v)=>s+custoVisita(v),0);
   const lucro      = receita - custoTotal;
@@ -2819,7 +2863,7 @@ function renderRelatorios(){
   const rankLabel = document.getElementById('rel-rank-label');
   if(rankLabel) rankLabel.textContent = '('+label+')';
   const rankData = clientes.map(c=>{
-    const cv = filterByPeriod(visitas.filter(v=>v.clienteId===c.id), relPeriod);
+    const cv = filterByPeriod(visitas.filter(v=>v.clienteId===c.id), relPeriod, 'rel');
     return {c, vendidos:cv.reduce((s,v)=>s+totalVendidosVisita(v),0), recebido:cv.reduce((s,v)=>s+(+v.recebido||0),0)};
   }).filter(x=>x.vendidos>0||x.recebido>0).sort((a,b)=>b.recebido-a.recebido).slice(0,8);
   const medals=['🥇','🥈','🥉'];
@@ -2880,8 +2924,122 @@ function renderRelatorios(){
 }
 
 // ─── ANÁLISE ─────────────────────────────────────────────────────
+function semanaRange(offset=0){
+  const d = new Date();
+  const day = d.getDay();
+  const diffStart = d.getDate() - day + (day===0?-6:1) + offset*7;
+  const s = new Date(d.getFullYear(), d.getMonth(), diffStart);
+  const e = new Date(s); e.setDate(s.getDate()+6);
+  const fmt = x=>`${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`;
+  return {from:fmt(s), to:fmt(e)};
+}
+
+function renderComparativo(el){
+  const atual  = semanaRange(0);
+  const passada= semanaRange(-1);
+  const vAtual  = visitas.filter(v=>v.data>=atual.from  &&v.data<=atual.to  &&v.clienteId!==AVULSA_ID);
+  const vPassada= visitas.filter(v=>v.data>=passada.from&&v.data<=passada.to&&v.clienteId!==AVULSA_ID);
+
+  function stats(vs){
+    const vendidos  = vs.reduce((s,v)=>s+totalVendidosVisita(v),0);
+    const repostos  = vs.reduce((s,v)=>s+(+v.repostos||0),0);
+    const recebido  = vs.reduce((s,v)=>s+(+v.recebido||0),0);
+    const cobrado   = vs.reduce((s,v)=>s+(+v.valor||0),0);
+    const saldo     = Math.max(0,cobrado-recebido);
+    const ticket    = vs.length>0&&recebido>0 ? recebido/vs.length : 0;
+    const clientes  = [...new Set(vs.map(v=>v.clienteId))];
+    // top cliente por recebido
+    const topCliente = clientes.map(cid=>{
+      const c=clientes_.find(x=>x.id===cid);
+      const rec=vs.filter(v=>v.clienteId===cid).reduce((s,v)=>s+(+v.recebido||0),0);
+      return {nome:c?c.nome:'—', rec};
+    }).sort((a,b)=>b.rec-a.rec)[0];
+    return {vendidos,repostos,recebido,cobrado,saldo,ticket,nVisitas:vs.length,nClientes:clientes.length,topCliente};
+  }
+
+  const clientes_ = clientes;
+  const sa = stats(vAtual);
+  const sp = stats(vPassada);
+
+  function diff(atual,ant){
+    if(ant===0&&atual===0) return {icon:'→',cor:'var(--text3)',pct:''};
+    if(ant===0) return {icon:'↑',cor:'var(--teal)',pct:'novo'};
+    const p = Math.round(((atual-ant)/ant)*100);
+    if(p>0)  return {icon:'↑',cor:'var(--teal)',  pct:`+${p}%`};
+    if(p<0)  return {icon:'↓',cor:'var(--coral)', pct:`${p}%`};
+    return {icon:'→',cor:'var(--text3)',pct:'igual'};
+  }
+
+  function row(label, vAtual, vPass, fmt=v=>v){
+    const d=diff(typeof vAtual==='number'?vAtual:0, typeof vPass==='number'?vPass:0);
+    return `<div style="display:grid;grid-template-columns:1fr 1fr 1fr 40px;gap:8px;align-items:center;padding:.6rem 0;border-bottom:.5px solid var(--border)">
+      <div style="font-size:12px;color:var(--text2);font-weight:500">${label}</div>
+      <div style="text-align:center;font-size:13px;color:var(--text3)">${fmt(vPass)}</div>
+      <div style="text-align:center;font-size:14px;font-weight:700;color:var(--text)">${fmt(vAtual)}</div>
+      <div style="text-align:center;font-size:13px;font-weight:700;color:${d.cor}">${d.icon} <span style="font-size:10px">${d.pct}</span></div>
+    </div>`;
+  }
+
+  // Top clientes comparativo
+  const todosClientes = [...new Set([...vAtual,...vPassada].map(v=>v.clienteId))];
+  const topComp = todosClientes.map(cid=>{
+    const c=clientes_.find(x=>x.id===cid);
+    const recA=vAtual.filter(v=>v.clienteId===cid).reduce((s,v)=>s+(+v.recebido||0),0);
+    const recP=vPassada.filter(v=>v.clienteId===cid).reduce((s,v)=>s+(+v.recebido||0),0);
+    const vendA=vAtual.filter(v=>v.clienteId===cid).reduce((s,v)=>s+totalVendidosVisita(v),0);
+    return {nome:c?c.nome:'—',recA,recP,vendA};
+  }).filter(x=>x.recA>0||x.recP>0).sort((a,b)=>b.recA-a.recA).slice(0,6);
+
+  const fmtDate2 = r=>`${fmtDate(r.from).slice(0,5)} a ${fmtDate(r.to).slice(0,5)}`;
+
+  el.innerHTML = `
+    <!-- Header -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 40px;gap:8px;margin-bottom:.5rem;padding:.5rem 0;border-bottom:2px solid var(--border)">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3)">Métrica</div>
+      <div style="text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3)">Semana passada<br><span style="font-weight:400">${fmtDate2(passada)}</span></div>
+      <div style="text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--amber)">Esta semana<br><span style="font-weight:400">${fmtDate2(atual)}</span></div>
+      <div style="text-align:center;font-size:11px;font-weight:700;color:var(--text3)">Var.</div>
+    </div>
+
+    ${row('Visitas realizadas', sa.nVisitas, sp.nVisitas)}
+    ${row('Clientes visitados', sa.nClientes, sp.nClientes)}
+    ${row('Brownies vendidos',  sa.vendidos,  sp.vendidos)}
+    ${row('Brownies repostos',  sa.repostos,  sp.repostos)}
+    ${row('Total cobrado',      sa.cobrado,   sp.cobrado,   fmtMoney)}
+    ${row('Total recebido',     sa.recebido,  sp.recebido,  fmtMoney)}
+    ${row('Saldo em aberto',    sa.saldo,     sp.saldo,     fmtMoney)}
+    ${row('Ticket médio/visita',sa.ticket,    sp.ticket,    fmtMoney)}
+
+    <!-- Top clientes -->
+    <div style="margin-top:1.25rem">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:.75rem">
+        <i class="ti ti-trophy" style="font-size:14px;color:var(--amber)"></i> Por cliente
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 40px;gap:8px;padding:.4rem 0;border-bottom:1px solid var(--border);margin-bottom:4px">
+        <div style="font-size:11px;color:var(--text3);font-weight:600">Cliente</div>
+        <div style="text-align:center;font-size:11px;color:var(--text3);font-weight:600">Semana passada</div>
+        <div style="text-align:center;font-size:11px;color:var(--amber);font-weight:600">Esta semana</div>
+        <div style="text-align:center;font-size:11px;color:var(--text3);font-weight:600">Var.</div>
+      </div>
+      ${topComp.map(x=>{
+        const d=diff(x.recA,x.recP);
+        return `<div style="display:grid;grid-template-columns:1fr 1fr 1fr 40px;gap:8px;align-items:center;padding:.5rem 0;border-bottom:.5px solid var(--border)">
+          <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer" onclick="abrirPerfil('${todosClientes.find(id=>(clientes_.find(c=>c.id===id)?.nome||'—')===x.nome)||''}')">${x.nome}</div>
+          <div style="text-align:center;font-size:12px;color:var(--text3)">${x.recP>0?fmtMoney(x.recP):'—'}</div>
+          <div style="text-align:center;font-size:13px;font-weight:700;color:${x.recA>0?'var(--teal)':'var(--text3)'}">${x.recA>0?fmtMoney(x.recA):'—'}</div>
+          <div style="text-align:center;font-size:13px;font-weight:700;color:${d.cor}">${d.icon}</div>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+}
+
 function renderAnalise(){
   const ativos = clientes.filter(c=>c.status==='ativo' && c.id !== AVULSA_ID);
+
+  // ── 0. COMPARATIVO SEMANAL ───────────────────────────────────
+  const compEl = document.getElementById('analise-comparativo');
+  if(compEl) renderComparativo(compEl);
 
   // ── 1. ESTOQUE EM CAMPO ──────────────────────────────────────
   const estoqueData = ativos
