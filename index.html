@@ -309,27 +309,27 @@ input[readonly]{background:var(--surface2);opacity:.8}
             <div class="sabor-nome"><div class="sabor-dot" style="background:#6b3f10"></div>Brigadeiro</div>
             <div class="row">
               <div class="field"><label>Vendidos</label><input type="number" id="s-brig-v" min="0" placeholder="0" oninput="calcSabores()"></div>
-              <div class="field"><label>Repostos</label><input type="number" id="s-brig-r" min="0" placeholder="0" oninput="calcSabores()"></div>
+              <div class="field"><label>Abastecidos</label><input type="number" id="s-brig-r" min="0" placeholder="0" oninput="calcSabores()"></div>
             </div>
           </div>
           <div class="sabor-card">
             <div class="sabor-nome"><div class="sabor-dot" style="background:#c9a84c"></div>Ninho</div>
             <div class="row">
               <div class="field"><label>Vendidos</label><input type="number" id="s-ninho-v" min="0" placeholder="0" oninput="calcSabores()"></div>
-              <div class="field"><label>Repostos</label><input type="number" id="s-ninho-r" min="0" placeholder="0" oninput="calcSabores()"></div>
+              <div class="field"><label>Abastecidos</label><input type="number" id="s-ninho-r" min="0" placeholder="0" oninput="calcSabores()"></div>
             </div>
           </div>
           <div class="sabor-card">
             <div class="sabor-nome"><div class="sabor-dot" style="background:#7b3f8c"></div>Ninho c/ Nutella</div>
             <div class="row">
               <div class="field"><label>Vendidos</label><input type="number" id="s-nn-v" min="0" placeholder="0" oninput="calcSabores()"></div>
-              <div class="field"><label>Repostos</label><input type="number" id="s-nn-r" min="0" placeholder="0" oninput="calcSabores()"></div>
+              <div class="field"><label>Abastecidos</label><input type="number" id="s-nn-r" min="0" placeholder="0" oninput="calcSabores()"></div>
             </div>
           </div>
         </div>
         <div class="row">
           <div class="field"><label>Total vendidos</label><input type="number" id="v-vendidos" readonly placeholder="0"></div>
-          <div class="field"><label>Total repostos</label><input type="number" id="v-repostos" readonly placeholder="0"></div>
+          <div class="field"><label>Total abastecidos</label><input type="number" id="v-repostos" readonly placeholder="0"></div>
           <div class="field"><label>Estoque antes</label><input type="number" id="v-estoque-antes" readonly placeholder="—"></div>
           <div class="field"><label>Estoque após</label><input type="number" id="v-estoque-depois" readonly placeholder="—"></div>
         </div>
@@ -340,10 +340,28 @@ input[readonly]{background:var(--surface2);opacity:.8}
           <div class="field"><label>Meu preço por brownie (R$) <span style="font-size:10px;color:var(--amber);font-weight:600">← vem do cadastro</span></label><input type="number" id="v-preco" min="0" step="0.01" placeholder="0,00" oninput="calcVisita()" style="border-color:var(--amber)"></div>
           <div class="field"><label>Modelo de cobrança</label>
             <select id="v-modelo" onchange="calcVisita()" style="border-color:var(--amber)">
-              <option value="repostos">💰 Paga pelo que repõe</option>
-              <option value="vendidos">📦 Paga pelo que vendeu</option>
+              <option value="repostos">🧾 Compra — paga o que leva (NF)</option>
+              <option value="vendidos">🤝 Comodato — paga o que vendeu</option>
             </select>
           </div>
+        </div>
+        <!-- Preview dos dois valores -->
+        <div id="v-preview-valores" style="display:none;background:var(--surface2);border-radius:var(--radius);padding:.75rem 1rem;margin-bottom:.85rem">
+          <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">Valor calculado automaticamente — confira antes de salvar:</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <div id="v-preview-compra" style="flex:1;min-width:150px;padding:10px 14px;border-radius:8px;border:2px solid var(--border);background:var(--surface)">
+              <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px">🧾 Compra — paga o que leva</div>
+              <div id="v-val-compra" style="font-size:18px;font-weight:700;color:var(--amber)">—</div>
+              <div id="v-qtd-compra" style="font-size:11px;color:var(--text3)"></div>
+            </div>
+            <div id="v-preview-comodato" style="flex:1;min-width:150px;padding:10px 14px;border-radius:8px;border:2px solid var(--border);background:var(--surface)">
+              <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px">🤝 Comodato — paga o que vendeu</div>
+              <div id="v-val-comodato" style="font-size:18px;font-weight:700;color:var(--teal)">—</div>
+              <div id="v-qtd-comodato" style="font-size:11px;color:var(--text3)"></div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
           <div class="field"><label>Valor cobrado (R$)</label><input type="number" id="v-valor" min="0" step="0.01" placeholder="0,00"></div>
           <div class="field"><label>Valor recebido (R$)</label><input type="number" id="v-recebido" min="0" step="0.01" placeholder="0,00"></div>
         </div>
@@ -736,28 +754,28 @@ input[readonly]{background:var(--surface2);opacity:.8}
         <div class="sabor-nome"><div class="sabor-dot" style="background:#6b3f10"></div>Brigadeiro</div>
         <div class="row">
           <div class="field"><label>Vendidos</label><input type="number" id="ev-brig-v" min="0" placeholder="0" oninput="calcEditSabores()"></div>
-          <div class="field"><label>Repostos</label><input type="number" id="ev-brig-r" min="0" placeholder="0" oninput="calcEditSabores()"></div>
+          <div class="field"><label>Abastecidos</label><input type="number" id="ev-brig-r" min="0" placeholder="0" oninput="calcEditSabores()"></div>
         </div>
       </div>
       <div class="sabor-card">
         <div class="sabor-nome"><div class="sabor-dot" style="background:#c9a84c"></div>Ninho</div>
         <div class="row">
           <div class="field"><label>Vendidos</label><input type="number" id="ev-ninho-v" min="0" placeholder="0" oninput="calcEditSabores()"></div>
-          <div class="field"><label>Repostos</label><input type="number" id="ev-ninho-r" min="0" placeholder="0" oninput="calcEditSabores()"></div>
+          <div class="field"><label>Abastecidos</label><input type="number" id="ev-ninho-r" min="0" placeholder="0" oninput="calcEditSabores()"></div>
         </div>
       </div>
       <div class="sabor-card">
         <div class="sabor-nome"><div class="sabor-dot" style="background:#7b3f8c"></div>Ninho c/ Nutella</div>
         <div class="row">
           <div class="field"><label>Vendidos</label><input type="number" id="ev-nn-v" min="0" placeholder="0" oninput="calcEditSabores()"></div>
-          <div class="field"><label>Repostos</label><input type="number" id="ev-nn-r" min="0" placeholder="0" oninput="calcEditSabores()"></div>
+          <div class="field"><label>Abastecidos</label><input type="number" id="ev-nn-r" min="0" placeholder="0" oninput="calcEditSabores()"></div>
         </div>
       </div>
     </div>
 
     <div class="row">
       <div class="field"><label>Total vendidos</label><input type="number" id="ev-vendidos" readonly placeholder="0"></div>
-      <div class="field"><label>Total repostos</label><input type="number" id="ev-repostos" readonly placeholder="0"></div>
+      <div class="field"><label>Total abastecidos</label><input type="number" id="ev-repostos" readonly placeholder="0"></div>
       <div class="field"><label>Estoque antes</label><input type="number" id="ev-estoque-antes" placeholder="—"></div>
       <div class="field"><label>Estoque após</label><input type="number" id="ev-estoque-depois" readonly placeholder="—"></div>
     </div>
@@ -768,8 +786,8 @@ input[readonly]{background:var(--surface2);opacity:.8}
       <div class="field"><label>Preço por brownie (R$)</label><input type="number" id="ev-preco" min="0" step="0.01" placeholder="0,00" oninput="calcEditVisita()"></div>
       <div class="field"><label>Modelo de cobrança</label>
         <select id="ev-modelo" onchange="calcEditVisita()">
-          <option value="repostos">💰 Paga pelo que repõe</option>
-          <option value="vendidos">📦 Paga pelo que vendeu</option>
+          <option value="repostos">🧾 Compra — paga o que leva (NF)</option>
+          <option value="vendidos">🤝 Comodato — paga o que vendeu</option>
         </select>
       </div>
     </div>
@@ -875,11 +893,11 @@ input[readonly]{background:var(--surface2);opacity:.8}
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <label style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-radius:var(--radius);border:2px solid var(--amber);cursor:pointer;flex:1;min-width:160px;background:rgba(167,108,42,.06)" id="label-repostos">
           <input type="radio" name="c-modelo-cobranca" id="c-modelo-cobranca" value="repostos" style="accent-color:var(--amber);width:16px;height:16px" onchange="document.getElementById('label-repostos').style.borderColor='var(--amber)';document.getElementById('label-vendidos').style.borderColor='var(--border)'">
-          <span style="font-size:13px;font-weight:500">💰 Paga pelo que <strong>repõe</strong></span>
+          <span style="font-size:13px;font-weight:500">🧾 <strong>Compra</strong> — paga o que leva (NF)</span>
         </label>
         <label style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-radius:var(--radius);border:2px solid var(--border);cursor:pointer;flex:1;min-width:160px" id="label-vendidos">
           <input type="radio" name="c-modelo-cobranca" value="vendidos" style="accent-color:var(--amber);width:16px;height:16px" onchange="document.getElementById('label-vendidos').style.borderColor='var(--amber)';document.getElementById('label-repostos').style.borderColor='var(--border)'">
-          <span style="font-size:13px;font-weight:500">📦 Paga pelo que <strong>vendeu</strong></span>
+          <span style="font-size:13px;font-weight:500">🤝 <strong>Comodato</strong> — paga o que vendeu</span>
         </label>
       </div>
     </div>
@@ -1105,9 +1123,9 @@ function renderDashboard(){
   document.getElementById('dash-period-label').textContent='('+periodLabels[dashPeriod]+')';
   document.getElementById('dash-metrics').innerHTML=`
     <div class="metric amber"><div class="val">${ativos.length}</div><div class="lbl">Clientes ativos</div></div>
-    <div class="metric teal"><div class="val">${totalEstoque}</div><div class="lbl">Brownies em campo</div></div>
+    <div class="metric teal"><div class="val">${totalEstoque}</div><div class="lbl">Abastecidos em campo</div></div>
     <div class="metric blue"><div class="val">${filtradas.length}</div><div class="lbl">Visitas — ${periodLabels[dashPeriod]}</div></div>
-    <div class="metric teal"><div class="val">${totalVend}</div><div class="lbl">Vendidos — ${periodLabels[dashPeriod]}</div></div>
+    <div class="metric teal"><div class="val">${totalVend}</div><div class="lbl">Vendidos pelo cliente — ${periodLabels[dashPeriod]}</div></div>
     <div class="metric coral"><div class="val">${fmtMoney(receitaPer)}</div><div class="lbl">Recebido — ${periodLabels[dashPeriod]}</div></div>
     ${saldoAberto>0?`<div class="metric coral"><div class="val">${fmtMoney(saldoAberto)}</div><div class="lbl">Saldo em aberto</div></div>`:''}
   `;
@@ -1291,8 +1309,8 @@ function renderDashboard(){
           }
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <span style="font-size:11px;background:var(--surface2);padding:2px 8px;border-radius:6px"><b style="color:var(--coral)">${totalVendidosVisita(v)}</b> vendidos</span>
-          <span style="font-size:11px;background:var(--surface2);padding:2px 8px;border-radius:6px"><b style="color:var(--teal)">${+v.repostos||0}</b> repostos</span>
+          <span style="font-size:11px;background:var(--surface2);padding:2px 8px;border-radius:6px">vendidos: <b style="color:var(--coral)">${totalVendidosVisita(v)}</b></span>
+          <span style="font-size:11px;background:var(--surface2);padding:2px 8px;border-radius:6px">abastecidos: <b style="color:var(--teal)">${+v.repostos||0}</b></span>
           <span style="font-size:11px;background:var(--surface2);padding:2px 8px;border-radius:6px">cobrado <b>${fmtMoney(+v.valor||0)}</b></span>
           <span style="font-size:11px;background:var(--surface2);padding:2px 8px;border-radius:6px;color:var(--teal)">recebido <b>${fmtMoney(+v.recebido||0)}</b></span>
         </div>
@@ -1332,7 +1350,7 @@ function renderClientes(){
         ${(c.estoqueNinho||0)>0?`<span class="badge amber" style="background:#fdf8e6;color:#8a6d10"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#c9a84c;margin-right:4px"></span>Ninho: ${c.estoqueNinho}</span>`:''}
         ${(c.estoqueNN||0)>0?`<span class="badge amber" style="background:#f5eefa;color:#7b3f8c"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#7b3f8c;margin-right:4px"></span>N.Nutella: ${c.estoqueNN}</span>`:''}
         ${c.precoVenda>0?`<span class="badge teal"><i class="ti ti-tag" style="font-size:12px"></i>vendo a ${fmtMoney(c.precoVenda)}</span>`:''}
-        ${c.modeloCobranca==='vendidos'?`<span class="badge blue"><i class="ti ti-package" style="font-size:12px"></i>paga pelo vendido</span>`:`<span class="badge amber"><i class="ti ti-refresh" style="font-size:12px"></i>paga pelo reposto</span>`}
+        ${c.modeloCobranca==='vendidos'?`<span class="badge blue"><i class="ti ti-package" style="font-size:12px"></i>Comodato</span>`:`<span class="badge amber"><i class="ti ti-refresh" style="font-size:12px"></i>Compra (NF)</span>`}
         ${c.precoRevenda>0?`<span class="badge blue"><i class="ti ti-tag" style="font-size:12px"></i>revende a ${fmtMoney(c.precoRevenda)}</span>`:''}
         ${c.requerNf?`<span class="badge amber"><i class="ti ti-file-invoice" style="font-size:12px"></i>Requer NF</span>`:''}
         ${ult?`<span class="tag">Última visita: ${fmtDate(ult.data)}</span>`:'<span class="tag">Sem visitas</span>'}
@@ -1568,6 +1586,39 @@ function calcVisita(){
                  + (+(document.getElementById('s-ninho-r').value)||0)
                  + (+(document.getElementById('s-nn-r').value)||0);
   const vendidos = +(document.getElementById('v-vendidos').value)||0;
+
+  // Calcular os dois valores
+  const valCompra   = preco * (repostos > 0 ? repostos : vendidos);
+  const valComodato = preco * vendidos;
+
+  // Mostrar preview se tiver preço
+  const preview = document.getElementById('v-preview-valores');
+  if(preview && preco > 0 && (repostos > 0 || vendidos > 0)){
+    preview.style.display = 'block';
+    document.getElementById('v-val-compra').textContent    = fmtMoney(valCompra);
+    document.getElementById('v-qtd-compra').textContent    = `${repostos > 0 ? repostos : vendidos} un. × ${fmtMoney(preco)}`;
+    document.getElementById('v-val-comodato').textContent  = fmtMoney(valComodato);
+    document.getElementById('v-qtd-comodato').textContent  = `${vendidos} un. × ${fmtMoney(preco)}`;
+
+    // Destacar o modelo selecionado
+    const boxCompra   = document.getElementById('v-preview-compra');
+    const boxComodato = document.getElementById('v-preview-comodato');
+    if(modelo === 'repostos'){
+      boxCompra.style.borderColor   = 'var(--amber)';
+      boxComodato.style.borderColor = 'var(--border)';
+      boxCompra.style.background    = 'var(--amber-bg)';
+      boxComodato.style.background  = 'var(--surface)';
+    } else {
+      boxComodato.style.borderColor = 'var(--teal)';
+      boxCompra.style.borderColor   = 'var(--border)';
+      boxComodato.style.background  = 'var(--teal-bg)';
+      boxCompra.style.background    = 'var(--surface)';
+    }
+  } else if(preview){
+    preview.style.display = 'none';
+  }
+
+  // Preencher valor cobrado com o modelo correto
   const base = modelo === 'repostos' ? (repostos > 0 ? repostos : vendidos) : vendidos;
   if(preco > 0 && base > 0){
     document.getElementById('v-valor').value = (preco * base).toFixed(2);
