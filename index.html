@@ -31,7 +31,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .nav-btn i{font-size:18px}
 .main{margin-left:220px;padding:2rem;flex:1;max-width:960px}
 .page{display:none}.page.active{display:block}
-#page-relatorios.active{display:block}
 .page-title{font-size:20px;font-weight:600;margin-bottom:1.5rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
 .period-tabs{display:flex;gap:4px;margin-bottom:1.5rem;flex-wrap:wrap}
 .ptab{padding:6px 14px;border-radius:20px;border:.5px solid var(--border-md);background:transparent;color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;transition:all .15s}
@@ -396,6 +395,7 @@ input[readonly]{background:var(--surface2);opacity:.8}
         </div>
         <div style="display:flex;gap:8px">
           <button class="btn small" id="perfil-btn-visita"><i class="ti ti-plus"></i> Nova visita</button>
+          <button class="btn small" id="perfil-btn-fechamento" style="color:var(--blue)"><i class="ti ti-receipt"></i> Fechamento</button>
           <button class="btn small" id="perfil-btn-editar"><i class="ti ti-edit"></i> Editar</button>
         </div>
       </div>
@@ -1363,6 +1363,7 @@ function renderClientes(){
           <button class="btn small primary" onclick="abrirPerfil('${c.id}')"><i class="ti ti-user"></i> Ver perfil</button>
           <button class="btn small" onclick="regVisita('${c.id}')"><i class="ti ti-plus"></i> Visita</button>
           <button class="btn small" onclick="abrirRecebimento('${c.id}')" title="Lançar recebimento avulso" style="color:var(--teal)"><i class="ti ti-cash"></i> Recebimento</button>
+          <button class="btn small" onclick="abrirFechamento('${c.id}')" title="Gerar extrato para cobrança" style="color:var(--blue)"><i class="ti ti-receipt"></i> Fechamento</button>
         </div>
         <div style="display:flex;gap:6px">
           <button class="btn small" onclick="editCliente('${c.id}')"><i class="ti ti-edit"></i> Editar</button>
@@ -1628,6 +1629,9 @@ function clearVisita(){
   ['v-cliente','v-preco','v-valor','v-recebido','v-obs','s-brig-v','s-brig-r','s-ninho-v','s-ninho-r','s-nn-v','s-nn-r'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   ['v-vendidos','v-repostos','v-estoque-antes','v-estoque-depois'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('v-data').value=todayLocal();
+  const prev=document.getElementById('v-preview-valores'); if(prev) prev.style.display='none';
+  const alertEl=document.getElementById('v-saldo-alerta'); if(alertEl) alertEl.innerHTML='';
+  const mEl=document.getElementById('v-modelo'); if(mEl) mEl.value='repostos';
 }
 
 async function salvarVisita(){
@@ -1849,55 +1853,85 @@ function gerarComprovanteInicial(clienteId){
   win.document.close();
 }
 
-function gerarComprovante(visitaId){
-  const v = visitas.find(x=>x.id===visitaId);
-  if(!v){ toast('Visita não encontrada.',false); return; }
-  const cl = clientes.find(c=>c.id===v.clienteId);
-  const nome = cl?cl.nome:'Cliente';
-  const responsavel = cl&&cl.responsavel?' | '+cl.responsavel:'';
-  const endereco = cl&&cl.endereco?cl.endereco+(cl.bairro?', '+cl.bairro:''):'';
-  const saldo = Math.max(0,(+v.valor||0)-(+v.recebido||0));
-  const sabores = v.sabores||{};
-  const saboresHTML = [
-    sabores.brigadeiro>0 ? `<tr><td>Brigadeiro</td><td>${sabores.brigadeiro} un.</td></tr>` : '',
-    sabores.ninho>0      ? `<tr><td>Ninho</td><td>${sabores.ninho} un.</td></tr>` : '',
-    sabores.ninhoNutella>0 ? `<tr><td>Ninho c/ Nutella</td><td>${sabores.ninhoNutella} un.</td></tr>` : '',
-  ].filter(Boolean).join('');
+function abrirFechamento(clienteId){
+  const c = clientes.find(x=>x.id===clienteId);
+  if(!c){ toast('Cliente não encontrado.',false); return; }
+
+  // Pega todas as visitas com saldo em aberto (não pagas ainda) — ordenadas por data
+  const todasVisitas = visitas.filter(v=>v.clienteId===clienteId).sort((a,b)=>a.data.localeCompare(b.data));
+  const pendentes = todasVisitas.filter(v=>(+v.valor||0) > (+v.recebido||0));
+
+  if(pendentes.length===0){
+    toast('Este cliente não tem nenhuma visita com saldo pendente.', false);
+    return;
+  }
+
+  // Totais gerais
+  const totalBrig = pendentes.reduce((s,v)=>s+(v.sabores?.brigadeiro||0),0);
+  const totalNinho = pendentes.reduce((s,v)=>s+(v.sabores?.ninho||0),0);
+  const totalNN = pendentes.reduce((s,v)=>s+(v.sabores?.ninhoNutella||0),0);
+  const totalVendidos = totalBrig+totalNinho+totalNN;
+  const totalCobrado = pendentes.reduce((s,v)=>s+(+v.valor||0),0);
+  const totalRecebido = pendentes.reduce((s,v)=>s+(+v.recebido||0),0);
+  const totalSaldo = totalCobrado-totalRecebido;
+
+  const periodoInicio = pendentes[0].data;
+  const periodoFim = pendentes[pendentes.length-1].data;
+
+  const linhasHTML = pendentes.map(v=>{
+    const sab = v.sabores||{};
+    const saldoLinha = Math.max(0,(+v.valor||0)-(+v.recebido||0));
+    return `<tr>
+      <td>${fmtDate(v.data)}</td>
+      <td style="text-align:center">${sab.brigadeiro||0}</td>
+      <td style="text-align:center">${sab.ninho||0}</td>
+      <td style="text-align:center">${sab.ninhoNutella||0}</td>
+      <td style="text-align:center;font-weight:600">${totalVendidosVisita(v)}</td>
+      <td style="text-align:right">${fmtMoney(+v.valor||0)}</td>
+      <td style="text-align:right;color:${saldoLinha>0?'#c84b1f':'#0d6e52'}">${fmtMoney(+v.recebido||0)}</td>
+    </tr>`;
+  }).join('');
 
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Comprovante de Visita</title>
+<title>Fechamento — ${c.nome}</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
   *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:'Inter',sans-serif;background:#f5f0e8;color:#1a1814;padding:24px;max-width:480px;margin:0 auto}
-  .card{background:#fff;border-radius:16px;padding:24px;box-shadow:0 2px 16px rgba(0,0,0,.08)}
-  .header{text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px dashed #e8e4dc}
-  .logo{font-size:28px;margin-bottom:4px}
-  .titulo{font-size:20px;font-weight:700;color:#6b3f10}
-  .subtitulo{font-size:13px;color:#9c9484;margin-top:2px}
-  .secao{margin-bottom:16px}
-  .secao-titulo{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:#9c9484;margin-bottom:8px}
-  .info-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0ece4;font-size:14px}
-  .info-row:last-child{border-bottom:none}
-  .info-val{font-weight:600}
-  table{width:100%;border-collapse:collapse;font-size:14px}
-  table td{padding:6px 0;border-bottom:1px solid #f0ece4}
-  table td:last-child{text-align:right;font-weight:600}
-  .total-row{background:#fdf8f0;border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;margin-bottom:8px;font-size:15px;font-weight:600}
-  .total-row.recebido{color:#0d6e52}
-  .total-row.saldo{color:#c84b1f}
-  .total-row.quitado{color:#0d6e52}
-  .footer{text-align:center;margin-top:20px;padding-top:16px;border-top:2px dashed #e8e4dc;font-size:12px;color:#9c9484;line-height:1.8}
-  .assinatura{margin-top:24px;padding-top:16px;border-top:1px solid #e8e4dc}
-  .linha-ass{border-bottom:1px solid #1a1814;height:32px;margin-bottom:6px}
-  .label-ass{font-size:11px;color:#9c9484;text-align:center}
-  .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600}
-  .badge.quitado{background:#d4f0e8;color:#0d6e52}
-  .badge.saldo{background:#fde8e0;color:#c84b1f}
+  body{font-family:'Inter',sans-serif;background:#f5f0e8;color:#1a1814;padding:24px;max-width:640px;margin:0 auto}
+  .card{background:#fff;border-radius:16px;padding:28px;box-shadow:0 2px 16px rgba(0,0,0,.08)}
+  .header{text-align:center;margin-bottom:24px;padding-bottom:20px;border-bottom:2px dashed #e8e4dc}
+  .logo{font-size:30px;margin-bottom:6px}
+  .titulo{font-size:22px;font-weight:800;color:#6b3f10}
+  .subtitulo{font-size:13px;color:#9c9484;margin-top:4px}
+  .periodo{display:inline-block;background:#e6f0fb;color:#1856a0;font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;margin-top:10px}
+  .secao{margin-bottom:20px}
+  .secao-titulo{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#9c9484;margin-bottom:10px}
+  .info-row{display:flex;justify-content:space-between;padding:5px 0;font-size:14px}
+  .info-row span:last-child{font-weight:600}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:8px}
+  thead th{background:#faf7f2;padding:8px 6px;font-size:11px;font-weight:700;color:#6b6659;text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid #e8e4dc}
+  thead th:first-child{text-align:left}
+  tbody td{padding:9px 6px;border-bottom:1px solid #f0ece4}
+  tbody tr:last-child td{border-bottom:none}
+  .totais-box{background:#faf7f2;border-radius:12px;padding:18px 20px;margin-top:16px}
+  .totais-row{display:flex;justify-content:space-between;padding:6px 0;font-size:14px}
+  .totais-row.grande{font-size:17px;font-weight:800;color:#6b3f10;padding-top:12px;margin-top:8px;border-top:2px solid #e8d5b0}
+  .sabor-resumo{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+  .sabor-chip{flex:1;min-width:100px;background:#fff;border-radius:10px;padding:10px 14px;text-align:center;border:1px solid #e8e4dc}
+  .sabor-chip .n{font-size:20px;font-weight:800;color:#6b3f10}
+  .sabor-chip .l{font-size:11px;color:#9c9484;margin-top:2px}
+  .saldo-destaque{background:#fde8e0;border:2px solid #e8b4a0;border-radius:14px;padding:18px 20px;text-align:center;margin-top:18px}
+  .saldo-destaque .label{font-size:12px;font-weight:700;color:#c84b1f;text-transform:uppercase;letter-spacing:.6px}
+  .saldo-destaque .valor{font-size:32px;font-weight:800;color:#c84b1f;margin-top:6px}
+  .assinatura{margin-top:28px;padding-top:18px;border-top:1px solid #e8e4dc;display:flex;gap:24px}
+  .ass-col{flex:1;text-align:center}
+  .linha-ass{border-bottom:1px solid #1a1814;height:36px;margin-bottom:6px}
+  .label-ass{font-size:11px;color:#9c9484}
+  .footer{text-align:center;margin-top:24px;padding-top:18px;border-top:2px dashed #e8e4dc;font-size:12px;color:#9c9484;line-height:1.8}
   @media print{
     body{background:#fff;padding:0}
     .no-print{display:none}
@@ -1909,58 +1943,167 @@ function gerarComprovante(visitaId){
 <div class="card">
   <div class="header">
     <div class="logo">🍫</div>
-    <div class="titulo">Comprovante de Visita</div>
-    <div class="subtitulo">${fmtDate(v.data)}</div>
+    <div class="titulo">Fechamento para Cobrança</div>
+    <div class="subtitulo">${c.nome}${c.responsavel?' · '+c.responsavel:''}</div>
+    <div class="periodo">📅 ${fmtDate(periodoInicio)} até ${fmtDate(periodoFim)}</div>
   </div>
 
   <div class="secao">
     <div class="secao-titulo">Cliente</div>
-    <div class="info-row"><span>Nome</span><span class="info-val">${nome}</span></div>
-    ${responsavel?`<div class="info-row"><span>Responsável</span><span class="info-val">${cl.responsavel}</span></div>`:''}
-    ${endereco?`<div class="info-row"><span>Endereço</span><span class="info-val" style="text-align:right;max-width:240px">${endereco}</span></div>`:''}
+    <div class="info-row"><span>Nome</span><span>${c.nome}</span></div>
+    ${c.responsavel?`<div class="info-row"><span>Responsável</span><span>${c.responsavel}</span></div>`:''}
+    ${c.endereco?`<div class="info-row"><span>Endereço</span><span>${c.endereco}${c.bairro?', '+c.bairro:''}</span></div>`:''}
+    ${c.telefone?`<div class="info-row"><span>Telefone</span><span>${c.telefone}</span></div>`:''}
   </div>
 
   <div class="secao">
-    <div class="secao-titulo">Movimentação de estoque</div>
-    <div class="info-row"><span>Estoque anterior</span><span class="info-val">${+v.estoqueAntes||0} un.</span></div>
-    <div class="info-row"><span>Vendidos</span><span class="info-val" style="color:#c84b1f">−${totalVendidosVisita(v)} un.</span></div>
-    <div class="info-row"><span>Repostos</span><span class="info-val" style="color:#0d6e52">+${+v.repostos||0} un.</span></div>
-    <div class="info-row"><span>Estoque atual</span><span class="info-val">${+v.estoqueDepois||0} un.</span></div>
+    <div class="secao-titulo">Detalhamento por visita (${pendentes.length} visita${pendentes.length!==1?'s':''} em aberto)</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th style="text-align:center">Brig.</th>
+          <th style="text-align:center">Ninho</th>
+          <th style="text-align:center">N.Nut.</th>
+          <th style="text-align:center">Total</th>
+          <th style="text-align:right">Cobrado</th>
+          <th style="text-align:right">Recebido</th>
+        </tr>
+      </thead>
+      <tbody>${linhasHTML}</tbody>
+    </table>
   </div>
 
-  ${saboresHTML?`<div class="secao">
-    <div class="secao-titulo">Vendidos por sabor</div>
-    <table>${saboresHTML}</table>
-  </div>`:''}
-
-  <div class="secao">
-    <div class="secao-titulo">Financeiro</div>
-    ${v.preco>0?`<div class="info-row"><span>Preço por unidade</span><span class="info-val">${fmtMoney(+v.preco)}</span></div>`:''}
-    <div class="info-row"><span>Total cobrado</span><span class="info-val">${fmtMoney(+v.valor||0)}</span></div>
+  <div class="sabor-resumo">
+    <div class="sabor-chip"><div class="n">${totalBrig}</div><div class="l">Brigadeiro</div></div>
+    <div class="sabor-chip"><div class="n">${totalNinho}</div><div class="l">Ninho</div></div>
+    <div class="sabor-chip"><div class="n">${totalNN}</div><div class="l">Ninho c/ Nutella</div></div>
+    <div class="sabor-chip" style="background:#fdf3e0"><div class="n">${totalVendidos}</div><div class="l">Total geral</div></div>
   </div>
 
-  <div class="total-row recebido">
-    <span>Recebido nesta visita</span>
-    <span>${fmtMoney(+v.recebido||0)}</span>
+  <div class="totais-box">
+    <div class="totais-row"><span>Total cobrado no período</span><span>${fmtMoney(totalCobrado)}</span></div>
+    <div class="totais-row"><span>Total já recebido</span><span style="color:#0d6e52">${fmtMoney(totalRecebido)}</span></div>
+    <div class="totais-row grande"><span>Saldo a pagar</span><span>${fmtMoney(totalSaldo)}</span></div>
   </div>
-  ${saldo>0
-    ? `<div class="total-row saldo"><span>Saldo em aberto</span><span>${fmtMoney(saldo)}</span></div>`
-    : `<div class="total-row quitado"><span>✓ Pagamento quitado</span><span></span></div>`
-  }
 
-  ${v.obs?`<div class="secao" style="margin-top:12px">
-    <div class="secao-titulo">Observações</div>
-    <div style="font-size:13px;color:#6b6659;line-height:1.6">${v.obs}</div>
-  </div>`:''}
+  <div class="saldo-destaque">
+    <div class="label">Valor total para cobrança</div>
+    <div class="valor">${fmtMoney(totalSaldo)}</div>
+  </div>
 
   <div class="assinatura">
-    <div class="linha-ass"></div>
-    <div class="label-ass">Assinatura do cliente: ${nome}${responsavel}</div>
+    <div class="ass-col">
+      <div class="linha-ass"></div>
+      <div class="label-ass">Benditto Cacau</div>
+    </div>
+    <div class="ass-col">
+      <div class="linha-ass"></div>
+      <div class="label-ass">${c.nome}${c.responsavel?' — '+c.responsavel:''}</div>
+    </div>
   </div>
 
   <div class="footer">
     Obrigada pela parceria! 🍫<br>
     Documento gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}
+  </div>
+</div>
+
+<div class="no-print" style="text-align:center;margin-top:16px;display:flex;gap:10px;justify-content:center">
+  <button onclick="window.print()" style="background:#6b3f10;color:#fff;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer">🖨️ Imprimir / Salvar PDF</button>
+  <button onclick="window.close()" style="background:#e8e4dc;color:#1a1814;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer">Fechar</button>
+</div>
+</body>
+</html>`;
+
+  const win = window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
+}
+
+function gerarComprovante(visitaId){
+  const v = visitas.find(x=>x.id===visitaId);
+  if(!v){ toast('Visita não encontrada.',false); return; }
+  const cl = clientes.find(c=>c.id===v.clienteId);
+  const nome = cl?cl.nome:'Cliente';
+  const saldo = Math.max(0,(+v.valor||0)-(+v.recebido||0));
+  const sab = v.sabRepostos || v.saboresRepostos || {};
+  const repostoTotal = (sab.brigadeiro||0)+(sab.ninho||0)+(sab.ninhoNutella||0);
+  const saboresHTML = [
+    sab.brigadeiro>0    ? `<tr><td>Brigadeiro</td><td>${sab.brigadeiro} un.</td></tr>` : '',
+    sab.ninho>0         ? `<tr><td>Ninho</td><td>${sab.ninho} un.</td></tr>` : '',
+    sab.ninhoNutella>0  ? `<tr><td>Ninho c/ Nutella</td><td>${sab.ninhoNutella} un.</td></tr>` : '',
+  ].filter(Boolean).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Comprovante de Visita</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Inter',sans-serif;background:#f5f0e8;color:#1a1814;padding:24px;max-width:420px;margin:0 auto}
+  .card{background:#fff;border-radius:16px;padding:24px;box-shadow:0 2px 16px rgba(0,0,0,.08)}
+  .header{text-align:center;margin-bottom:18px;padding-bottom:16px;border-bottom:2px dashed #e8e4dc}
+  .logo{font-size:28px;margin-bottom:4px}
+  .titulo{font-size:19px;font-weight:700;color:#6b3f10}
+  .subtitulo{font-size:13px;color:#9c9484;margin-top:2px}
+  .cliente-nome{font-size:15px;font-weight:600;text-align:center;margin-bottom:18px}
+  table{width:100%;border-collapse:collapse;font-size:14px;margin-bottom:14px}
+  table td{padding:7px 0;border-bottom:1px solid #f0ece4}
+  table td:last-child{text-align:right;font-weight:600}
+  .total-box{background:#fdf3e0;border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:15px;font-weight:700;color:#6b3f10}
+  .valor-box{background:#fdf8f0;border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;margin-bottom:8px;font-size:15px;font-weight:600}
+  .valor-box.recebido{color:#0d6e52}
+  .valor-box.saldo{color:#c84b1f}
+  .valor-box.quitado{color:#0d6e52}
+  .footer{text-align:center;margin-top:18px;padding-top:14px;border-top:2px dashed #e8e4dc;font-size:11px;color:#9c9484;line-height:1.7}
+  .assinatura{margin-top:20px;padding-top:14px;border-top:1px solid #e8e4dc}
+  .linha-ass{border-bottom:1px solid #1a1814;height:30px;margin-bottom:6px}
+  .label-ass{font-size:11px;color:#9c9484;text-align:center}
+  @media print{
+    body{background:#fff;padding:0}
+    .no-print{display:none}
+    .card{box-shadow:none}
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <div class="logo">🍫</div>
+    <div class="titulo">Comprovante de Reposição</div>
+    <div class="subtitulo">${fmtDate(v.data)}</div>
+  </div>
+
+  <div class="cliente-nome">${nome}</div>
+
+  ${saboresHTML ? `<table>${saboresHTML}</table>` : '<p style="text-align:center;color:#9c9484;font-size:13px;margin-bottom:14px">Nenhum brownie reposto nesta visita</p>'}
+
+  ${repostoTotal>0 ? `<div class="total-box">
+    <span>Total abastecido</span>
+    <span>${repostoTotal} un.</span>
+  </div>` : ''}
+
+  <div class="valor-box recebido">
+    <span>Valor recebido</span>
+    <span>${fmtMoney(+v.recebido||0)}</span>
+  </div>
+  ${saldo>0
+    ? `<div class="valor-box saldo"><span>Saldo em aberto</span><span>${fmtMoney(saldo)}</span></div>`
+    : `<div class="valor-box quitado"><span>✓ Pagamento quitado</span><span></span></div>`
+  }
+
+  <div class="assinatura">
+    <div class="linha-ass"></div>
+    <div class="label-ass">Assinatura: ${nome}</div>
+  </div>
+
+  <div class="footer">
+    Obrigada pela parceria! 🍫<br>
+    ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}
   </div>
 </div>
 
@@ -2538,6 +2681,7 @@ function abrirPerfil(id){
   const c=clientes.find(x=>x.id===id); if(!c)return;
   document.getElementById('perfil-titulo').textContent=c.nome;
   document.getElementById('perfil-btn-visita').onclick=()=>regVisita(c.id);
+  document.getElementById('perfil-btn-fechamento').onclick=()=>abrirFechamento(c.id);
   document.getElementById('perfil-btn-editar').onclick=()=>openClientModal(c);
   const cv=visitas.filter(v=>v.clienteId===id).sort((a,b)=>b.data.localeCompare(a.data));
   const ult=cv[0];
