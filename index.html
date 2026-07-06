@@ -758,33 +758,29 @@ input[readonly]{background:var(--surface2);opacity:.8}
     <div class="sabores-grid" style="margin-bottom:.85rem">
       <div class="sabor-card">
         <div class="sabor-nome"><div class="sabor-dot" style="background:#6b3f10"></div>Brigadeiro</div>
-        <div class="row">
-          <div class="field"><label>Abastecidos</label><input type="number" id="ev-brig-v" min="0" placeholder="0" oninput="calcEditSabores()"></div>
-          <div class="field"><label>Abastecidos</label><input type="number" id="ev-brig-r" min="0" placeholder="0" oninput="calcEditSabores()"></div>
-        </div>
+        <div class="field"><label>Abastecidos</label><input type="number" id="ev-brig-r" min="0" placeholder="0" oninput="calcEditSabores()" style="font-size:18px;font-weight:600;text-align:center"></div>
+        <input type="hidden" id="ev-brig-v">
       </div>
       <div class="sabor-card">
         <div class="sabor-nome"><div class="sabor-dot" style="background:#c9a84c"></div>Ninho</div>
-        <div class="row">
-          <div class="field"><label>Abastecidos</label><input type="number" id="ev-ninho-v" min="0" placeholder="0" oninput="calcEditSabores()"></div>
-          <div class="field"><label>Abastecidos</label><input type="number" id="ev-ninho-r" min="0" placeholder="0" oninput="calcEditSabores()"></div>
-        </div>
+        <div class="field"><label>Abastecidos</label><input type="number" id="ev-ninho-r" min="0" placeholder="0" oninput="calcEditSabores()" style="font-size:18px;font-weight:600;text-align:center"></div>
+        <input type="hidden" id="ev-ninho-v">
       </div>
       <div class="sabor-card">
         <div class="sabor-nome"><div class="sabor-dot" style="background:#7b3f8c"></div>Ninho c/ Nutella</div>
-        <div class="row">
-          <div class="field"><label>Abastecidos</label><input type="number" id="ev-nn-v" min="0" placeholder="0" oninput="calcEditSabores()"></div>
-          <div class="field"><label>Abastecidos</label><input type="number" id="ev-nn-r" min="0" placeholder="0" oninput="calcEditSabores()"></div>
-        </div>
+        <div class="field"><label>Abastecidos</label><input type="number" id="ev-nn-r" min="0" placeholder="0" oninput="calcEditSabores()" style="font-size:18px;font-weight:600;text-align:center"></div>
+        <input type="hidden" id="ev-nn-v">
       </div>
     </div>
 
-    <div class="row">
-      <div class="field"><label>Total abastecidos</label><input type="number" id="ev-vendidos" readonly placeholder="0"></div>
-      <div class="field"><label>Total abastecidos</label><input type="number" id="ev-repostos" readonly placeholder="0"></div>
-      <div class="field"><label>Estoque antes</label><input type="number" id="ev-estoque-antes" placeholder="—"></div>
-      <div class="field"><label>Estoque após</label><input type="number" id="ev-estoque-depois" readonly placeholder="—"></div>
+    <div style="background:var(--amber-bg);border-radius:var(--radius);padding:.85rem 1rem;margin-bottom:.85rem;display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:13px;font-weight:600;color:var(--amber)">Total abastecido</span>
+      <span id="ev-total-display" style="font-size:22px;font-weight:800;color:var(--amber)">0 un.</span>
     </div>
+    <input type="hidden" id="ev-vendidos">
+    <input type="hidden" id="ev-repostos">
+    <input type="hidden" id="ev-estoque-antes">
+    <input type="hidden" id="ev-estoque-depois">
 
     <div class="divider"></div>
     <h3 style="font-size:14px;font-weight:600;margin-bottom:.85rem"><i class="ti ti-cash" style="color:var(--teal)"></i> Cobrança</h3>
@@ -2543,9 +2539,9 @@ function abrirEditarVisita(id){
   document.getElementById('ev-brig-v').value      = v.sabores?.brigadeiro||0;
   document.getElementById('ev-ninho-v').value     = v.sabores?.ninho||0;
   document.getElementById('ev-nn-v').value        = v.sabores?.ninhoNutella||0;
-  document.getElementById('ev-brig-r').value      = v.saboresRepostos?.brigadeiro||0;
-  document.getElementById('ev-ninho-r').value     = v.saboresRepostos?.ninho||0;
-  document.getElementById('ev-nn-r').value        = v.saboresRepostos?.ninhoNutella||0;
+  document.getElementById('ev-brig-r').value      = v.saboresRepostos?.brigadeiro||v.sabores?.brigadeiro||0;
+  document.getElementById('ev-ninho-r').value     = v.saboresRepostos?.ninho||v.sabores?.ninho||0;
+  document.getElementById('ev-nn-r').value        = v.saboresRepostos?.ninhoNutella||v.sabores?.ninhoNutella||0;
   document.getElementById('ev-estoque-antes').value = v.estoqueAntes||0;
   document.getElementById('ev-preco').value       = v.preco||'';
   const evModelo = document.getElementById('ev-modelo');
@@ -2565,18 +2561,17 @@ function onEditClienteChange(){
   if(c && c.precoVenda>0) document.getElementById('ev-preco').value = c.precoVenda.toFixed(2);
 }
 function calcEditSabores(){
-  const bv=+(document.getElementById('ev-brig-v').value)||0;
-  const nv=+(document.getElementById('ev-ninho-v').value)||0;
-  const nnv=+(document.getElementById('ev-nn-v').value)||0;
-  const br=+(document.getElementById('ev-brig-r').value)||0;
-  const nr=+(document.getElementById('ev-ninho-r').value)||0;
-  const nnr=+(document.getElementById('ev-nn-r').value)||0;
-  const antes = +(document.getElementById('ev-estoque-antes').value)||0;
-  const vendidos = bv+nv+nnv;
-  const repostos = br+nr+nnr;
-  document.getElementById('ev-vendidos').value = vendidos;
-  document.getElementById('ev-repostos').value = repostos;
-  document.getElementById('ev-estoque-depois').value = Math.max(0, antes - vendidos + repostos);
+  const br  = +(document.getElementById('ev-brig-r').value)||0;
+  const nr  = +(document.getElementById('ev-ninho-r').value)||0;
+  const nnr = +(document.getElementById('ev-nn-r').value)||0;
+  const total = br+nr+nnr;
+  // abastecidos = vendidos
+  const bv=document.getElementById('ev-brig-v');  if(bv)  bv.value=br;
+  const nv=document.getElementById('ev-ninho-v'); if(nv)  nv.value=nr;
+  const nnv=document.getElementById('ev-nn-v');   if(nnv) nnv.value=nnr;
+  const vv=document.getElementById('ev-vendidos');  if(vv)  vv.value=total;
+  const rv=document.getElementById('ev-repostos');  if(rv)  rv.value=total;
+  const td=document.getElementById('ev-total-display'); if(td) td.textContent=total+' un.';
   calcEditVisita();
 }
 function calcEditVisita(){
