@@ -253,7 +253,7 @@ input[readonly]{background:var(--surface2);opacity:.8}
       <div class="metrics" id="dash-metrics"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem">
         <div class="card" style="margin-bottom:0">
-          <h3><i class="ti ti-chart-bar"></i>Vendas por sabor <span id="dash-period-label" style="font-size:11px;color:var(--text3);margin-left:4px"></span></h3>
+          <h3><i class="ti ti-chart-bar"></i>Abastecidos por sabor <span id="dash-period-label" style="font-size:11px;color:var(--text3);margin-left:4px"></span></h3>
           <div id="dash-sabores-bar"></div>
         </div>
         <div class="card" style="margin-bottom:0">
@@ -408,7 +408,7 @@ input[readonly]{background:var(--surface2);opacity:.8}
       <div class="perfil-hero" id="perfil-hero"></div>
       <div class="metrics" id="perfil-metrics"></div>
       <div class="card" style="margin-bottom:1.25rem">
-        <h3><i class="ti ti-chart-bar"></i>Vendas por sabor</h3>
+        <h3><i class="ti ti-chart-bar"></i>Abastecidos por sabor</h3>
         <div id="perfil-sabores-bar"></div>
       </div>
       <div class="card">
@@ -450,7 +450,7 @@ input[readonly]{background:var(--surface2);opacity:.8}
       <div class="metrics" id="rel-metrics" style="margin-bottom:1.25rem"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem">
         <div class="card" style="margin-bottom:0"><h3><i class="ti ti-chart-bar"></i>Vendas por mês</h3><canvas id="chart-mensal" height="180"></canvas></div>
-        <div class="card" style="margin-bottom:0"><h3><i class="ti ti-cookie"></i>Participação por sabor</h3><canvas id="chart-sabores" height="180"></canvas></div>
+        <div class="card" style="margin-bottom:0"><h3><i class="ti ti-cookie"></i>Abastecidos por sabor</h3><canvas id="chart-sabores" height="180"></canvas></div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem">
         <div class="card" style="margin-bottom:0"><h3><i class="ti ti-coins"></i>Receita · Custo · Lucro <span id="rel-fin-label" style="font-size:11px;color:var(--text3)"></span></h3><canvas id="chart-financeiro" height="180"></canvas></div>
@@ -466,6 +466,104 @@ input[readonly]{background:var(--surface2);opacity:.8}
     <div id="page-analise" class="page">
       <div class="page-title">Análise do negócio</div>
 
+      <!-- CALCULADORA DE PROJEÇÃO -->
+      <div class="card">
+        <h3 style="margin-bottom:4px"><i class="ti ti-calculator" style="color:var(--amber)"></i> Calculadora de Projeção</h3>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:1.5rem">Preencha os campos abaixo e veja quanto você pode ganhar 👇</p>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-bottom:1.5rem">
+
+          <div class="field" style="margin-bottom:0">
+            <label>Quantos clientes você quer ter?</label>
+            <input type="number" id="calc-clientes-val" min="1" value="20" placeholder="Ex: 20" oninput="calcProjecao()" style="font-size:18px;font-weight:700">
+            <div style="font-size:11px;color:var(--text3);margin-top:4px">Hoje você tem <span id="calc-hint-clientes" style="font-weight:600;color:var(--amber)">—</span> ativos</div>
+          </div>
+
+          <div class="field" style="margin-bottom:0">
+            <label>Quantos brownies você deixa por visita em cada cliente?</label>
+            <input type="number" id="calc-brownie-val" min="1" value="18" placeholder="Ex: 18" oninput="calcProjecao()" style="font-size:18px;font-weight:700">
+            <div style="font-size:11px;color:var(--text3);margin-top:4px">Média de brownies abastecidos por visita</div>
+          </div>
+
+          <div class="field" style="margin-bottom:0">
+            <label>Quantas vezes por mês você visita cada cliente?</label>
+            <input type="number" id="calc-visitas-val" min="1" value="4" placeholder="Ex: 4" oninput="calcProjecao()" style="font-size:18px;font-weight:700">
+            <div style="font-size:11px;color:var(--text3);margin-top:4px">Ex: 4 = uma vez por semana</div>
+          </div>
+
+          <div class="field" style="margin-bottom:0">
+            <label>Por quanto você vende cada brownie? (R$)</label>
+            <input type="number" id="calc-preco-val" min="0.5" step="0.5" value="7" placeholder="Ex: 7,00" oninput="calcProjecao()" style="font-size:18px;font-weight:700">
+            <div style="font-size:11px;color:var(--text3);margin-top:4px">Seu preço de venda para o cliente</div>
+          </div>
+
+          <div class="field" style="margin-bottom:0">
+            <label>Quanto custa produzir cada brownie? (R$)</label>
+            <input type="number" id="calc-custo-val" min="0.1" step="0.1" value="2.54" placeholder="Ex: 2,54" oninput="calcProjecao()" style="font-size:18px;font-weight:700">
+            <div style="font-size:11px;color:var(--text3);margin-top:4px">Custo de ingredientes + embalagem</div>
+          </div>
+
+        </div>
+
+        <!-- Resultado em linguagem simples -->
+        <div id="calc-resultado-texto" style="background:var(--surface2);border-radius:14px;padding:20px;border:1px solid var(--border);margin-bottom:1rem;display:none">
+          <div style="font-size:13px;color:var(--text2);line-height:2" id="calc-texto-resumo"></div>
+        </div>
+
+        <!-- Cards de resultado -->
+        <div id="calc-resultado-cards" style="display:none">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text2);margin-bottom:10px">📅 Por mês</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:1.25rem">
+            <div class="metric teal" style="padding:.85rem">
+              <div class="val" id="calc-res-receita" style="font-size:20px">—</div>
+              <div class="lbl">você recebe</div>
+            </div>
+            <div class="metric coral" style="padding:.85rem">
+              <div class="val" id="calc-res-custo" style="font-size:20px">—</div>
+              <div class="lbl">você gasta</div>
+            </div>
+            <div class="metric amber" style="padding:.85rem">
+              <div class="val" id="calc-res-lucro" style="font-size:20px">—</div>
+              <div class="lbl">fica no bolso</div>
+            </div>
+            <div class="metric blue" style="padding:.85rem">
+              <div class="val" id="calc-res-margem" style="font-size:20px">—</div>
+              <div class="lbl">de margem</div>
+            </div>
+          </div>
+
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text2);margin-bottom:10px">📆 Por ano</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:1.25rem">
+            <div class="metric teal" style="padding:.85rem">
+              <div class="val" id="calc-res-receita-ano" style="font-size:20px">—</div>
+              <div class="lbl">receita total</div>
+            </div>
+            <div class="metric amber" style="padding:.85rem">
+              <div class="val" id="calc-res-lucro-ano" style="font-size:20px">—</div>
+              <div class="lbl">lucro total</div>
+            </div>
+            <div class="metric blue" style="padding:.85rem">
+              <div class="val" id="calc-res-brownies" style="font-size:20px">—</div>
+              <div class="lbl">brownies/mês</div>
+            </div>
+            <div class="metric blue" style="padding:.85rem">
+              <div class="val" id="calc-res-visitas-sem" style="font-size:20px">—</div>
+              <div class="lbl">visitas/semana</div>
+            </div>
+          </div>
+
+          <!-- Barra margem -->
+          <div style="background:var(--surface2);border-radius:10px;padding:14px;border:1px solid var(--border)">
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:8px;font-weight:600">
+              <span>💸 Custo</span><span id="calc-pct-label">—</span><span>💰 Lucro</span>
+            </div>
+            <div style="height:12px;background:var(--border);border-radius:20px;overflow:hidden">
+              <div id="calc-barra-lucro" style="height:100%;border-radius:20px;background:var(--amber);transition:width .3s;width:0%"></div>
+            </div>
+            <div id="calc-vs-atual" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:13px;color:var(--text2);line-height:1.8;display:none"></div>
+          </div>
+        </div>
+      </div>
       <!-- COMPARATIVO SEMANAL -->
       <div class="card">
         <h3><i class="ti ti-arrows-exchange"></i>Comparativo semanal — semana passada vs esta semana</h3>
@@ -3202,7 +3300,79 @@ function renderComparativo(el){
   `;
 }
 
+function calcProjecao(){
+  const nClientes = +(document.getElementById('calc-clientes-val').value)||0;
+  const browniesPV= +(document.getElementById('calc-brownie-val').value)||0;
+  const visitasPM = +(document.getElementById('calc-visitas-val').value)||0;
+  const preco     = +(document.getElementById('calc-preco-val').value)||0;
+  const custo     = +(document.getElementById('calc-custo-val').value)||0;
+
+  // Dica de clientes atuais
+  const clientesAtivos = clientes.filter(c=>c.status==='ativo'&&c.id!==AVULSA_ID).length;
+  const hintEl = document.getElementById('calc-hint-clientes');
+  if(hintEl) hintEl.textContent = clientesAtivos + ' cliente' + (clientesAtivos!==1?'s':'');
+
+  if(!nClientes||!browniesPV||!visitasPM||!preco){ return; }
+
+  // Cálculos
+  const totalBrowniesMes = nClientes * browniesPV * visitasPM;
+  const receitaMes  = totalBrowniesMes * preco;
+  const custoMes    = totalBrowniesMes * (custo||0);
+  const lucroMes    = receitaMes - custoMes;
+  const margem      = receitaMes > 0 ? Math.round((lucroMes/receitaMes)*100) : 0;
+  const visitasMes  = nClientes * visitasPM;
+  const visitasSem  = Math.round(visitasMes / 4.3 * 10) / 10;
+  const receitaAno  = receitaMes * 12;
+  const lucroAno    = lucroMes * 12;
+
+  // Mostrar cards
+  document.getElementById('calc-resultado-cards').style.display = 'block';
+
+  // Texto resumo em linguagem simples
+  const textoEl = document.getElementById('calc-resultado-texto');
+  const resumoEl = document.getElementById('calc-texto-resumo');
+  textoEl.style.display = 'block';
+  resumoEl.innerHTML = `
+    Com <strong>${nClientes} clientes</strong>, visitando <strong>${visitasPM}x por mês</strong> e deixando <strong>${browniesPV} brownies</strong> por visita:<br>
+    → Você vai deixar <strong>${totalBrowniesMes.toLocaleString('pt-BR')} brownies</strong> por mês no total<br>
+    → Vai receber <strong style="color:var(--teal)">${fmtMoney(receitaMes)}</strong> por mês${custo>0?` e gastar <strong style="color:var(--coral)">${fmtMoney(custoMes)}</strong> para produzir`:'.'}<br>
+    ${custo>0?`→ Vai ficar no seu bolso <strong style="color:var(--amber)">${fmtMoney(lucroMes)} por mês</strong> = <strong>${fmtMoney(lucroAno)} por ano</strong>`:''}
+    ${visitasSem>0?`<br>→ Você vai fazer em média <strong>${visitasSem} visitas por semana</strong>`:''}
+  `;
+
+  // Atualizar métricas
+  document.getElementById('calc-res-receita').textContent     = fmtMoney(receitaMes);
+  document.getElementById('calc-res-custo').textContent       = custo>0 ? fmtMoney(custoMes) : '—';
+  document.getElementById('calc-res-lucro').textContent       = custo>0 ? fmtMoney(lucroMes) : '—';
+  document.getElementById('calc-res-margem').textContent      = custo>0 ? margem+'%' : '—';
+  document.getElementById('calc-res-receita-ano').textContent = fmtMoney(receitaAno);
+  document.getElementById('calc-res-lucro-ano').textContent   = custo>0 ? fmtMoney(lucroAno) : '—';
+  document.getElementById('calc-res-brownies').textContent    = totalBrowniesMes.toLocaleString('pt-BR');
+  document.getElementById('calc-res-visitas-sem').textContent = visitasSem+'/sem';
+
+  // Barra de margem
+  const pctLabel = document.getElementById('calc-pct-label');
+  if(pctLabel) pctLabel.textContent = custo>0 ? margem+'% é lucro' : 'preencha o custo';
+  document.getElementById('calc-barra-lucro').style.width = custo>0 ? Math.max(0,Math.min(100,margem))+'%' : '0%';
+
+  // Comparar com atual
+  const vsEl = document.getElementById('calc-vs-atual');
+  if(vsEl && clientesAtivos>0){
+    const difClientes = nClientes - clientesAtivos;
+    vsEl.style.display = 'block';
+    vsEl.innerHTML = difClientes>0
+      ? `📍 Você tem <strong>${clientesAtivos} cliente${clientesAtivos!==1?'s':''}</strong> hoje. Para chegar em <strong>${nClientes}</strong>, precisa fechar mais <strong style="color:var(--amber)">${difClientes} parceiro${difClientes!==1?'s':''}</strong>.`
+      : difClientes<0
+        ? `📍 Você já tem <strong>${clientesAtivos} cliente${clientesAtivos!==1?'s':''}</strong> — <strong style="color:var(--teal)">${Math.abs(difClientes)} a mais</strong> do que no cenário simulado!`
+        : `📍 Você já tem exatamente <strong style="color:var(--teal)">${clientesAtivos} clientes</strong> — esse é o seu cenário atual! 🎉`;
+  } else if(vsEl) {
+    vsEl.style.display = 'none';
+  }
+}
+
+
 function renderAnalise(){
+  calcProjecao();
   const ativos = clientes.filter(c=>c.status==='ativo' && c.id !== AVULSA_ID);
 
   // ── 0. COMPARATIVO SEMANAL ───────────────────────────────────
