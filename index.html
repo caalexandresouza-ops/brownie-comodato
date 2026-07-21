@@ -1217,7 +1217,8 @@ function renderDashboard(){
   const totalEstoque=ativos.reduce((s,c)=>s+(c.estoqueBrig||0)+(c.estoqueNinho||0)+(c.estoqueNN||0),0);
   const filtradas=filterByPeriod(visitas,dashPeriod);
 
-  const receitaPer = filtradas.reduce((s,v)=>s+(+v.recebido||0),0);
+  const receitaPer = filtradas.reduce((s,v)=>s+(+v.valor||0),0);
+  const recebidoPer = filtradas.reduce((s,v)=>s+(+v.recebido||0),0);
   const saldoAberto = filtradas.reduce((s,v)=>s+Math.max(0,(+v.valor||0)-(+v.recebido||0)),0);
   const totalVend = filtradas.reduce((s,v)=>s+totalVendidosVisita(v),0);
   document.getElementById('dash-period-label').textContent='('+periodLabels[dashPeriod]+')';
@@ -1226,7 +1227,8 @@ function renderDashboard(){
     <div class="metric teal"><div class="val">${totalEstoque}</div><div class="lbl">Abastecidos em campo</div></div>
     <div class="metric blue"><div class="val">${filtradas.length}</div><div class="lbl">Visitas — ${periodLabels[dashPeriod]}</div></div>
     <div class="metric teal"><div class="val">${totalVend}</div><div class="lbl">Abastecidos — ${periodLabels[dashPeriod]}</div></div>
-    <div class="metric coral"><div class="val">${fmtMoney(receitaPer)}</div><div class="lbl">Recebido — ${periodLabels[dashPeriod]}</div></div>
+    <div class="metric teal"><div class="val">${fmtMoney(receitaPer)}</div><div class="lbl">Receita — ${periodLabels[dashPeriod]}</div></div>
+    <div class="metric blue"><div class="val">${fmtMoney(recebidoPer)}</div><div class="lbl">Recebido — ${periodLabels[dashPeriod]}</div></div>
     ${saldoAberto>0?`<div class="metric coral"><div class="val">${fmtMoney(saldoAberto)}</div><div class="lbl">Saldo em aberto</div></div>`:''}
   `;
   // Sabores
@@ -1338,7 +1340,7 @@ function renderDashboard(){
     const recebido=cv.reduce((s,v)=>s+(+v.recebido||0),0);
     const saldo=Math.max(0,cobrado-recebido);
     return {c,vendidos,repostos,cobrado,recebido,saldo,visitas:cv.length};
-  }).filter(x=>x.vendidos>0||x.recebido>0).sort((a,b)=>b.recebido-a.recebido).slice(0,10);
+  }).filter(x=>x.vendidos>0||x.cobrado>0).sort((a,b)=>b.cobrado-a.cobrado).slice(0,10);
   const top10El=document.getElementById('dash-top10');
   const medals=['🥇','🥈','🥉'];
   top10El.innerHTML=rankData.length===0
@@ -1356,8 +1358,8 @@ function renderDashboard(){
       </div>
       <div style="display:flex;gap:12px;padding-left:32px;flex-wrap:wrap">
         <span style="font-size:11px;color:var(--text3)"><span style="color:var(--amber);font-weight:600">${x.repostos}</span> abastecidos</span>
-        <span style="font-size:11px;color:var(--text3)">cobrado <span style="font-weight:600">${fmtMoney(x.cobrado)}</span></span>
-        <span style="font-size:11px;color:var(--teal);font-weight:600">recebido ${fmtMoney(x.recebido)}</span>
+        <span style="font-size:11px;color:var(--text2)">receita: <span style="font-weight:700;color:var(--teal)">${fmtMoney(x.cobrado)}</span></span>
+        ${x.saldo>0?`<span style="font-size:11px;color:var(--coral);font-weight:600">a receber ${fmtMoney(x.saldo)}</span>`:`<span style="font-size:11px;color:var(--teal);font-weight:600">✓ pago</span>`}
         <span style="font-size:11px;color:var(--text3)">${x.visitas} visita${x.visitas!==1?'s':''}</span>
       </div>
     </div>`).join('');
@@ -2786,14 +2788,16 @@ function abrirPerfil(id){
       ${c.obs?`<div class="perfil-info-item" style="grid-column:1/-1"><span class="lbl">Observações</span><span class="val">${c.obs}</span></div>`:''}
     </div>`;
   const totalVend=cv.reduce((s,v)=>s+totalVendidosVisita(v),0);
-  const totalRec=cv.reduce((s,v)=>s+(+v.recebido||0),0);
+  const totalRec=cv.reduce((s,v)=>s+(+v.valor||0),0);
+  const totalRecebido=cv.reduce((s,v)=>s+(+v.recebido||0),0);
   const saldo=Math.max(0,cv.reduce((s,v)=>s+(+v.valor||0),0)-totalRec);
   const totalRep=cv.reduce((s,v)=>s+(+v.repostos||0),0);
   document.getElementById('perfil-metrics').innerHTML=`
     <div class="metric blue"><div class="val">${cv.length}</div><div class="lbl">Total de visitas</div></div>
     <div class="metric amber"><div class="val">${totalVend}</div><div class="lbl">Brownies abastecidos</div></div>
     <div class="metric teal"><div class="val">${totalRep}</div><div class="lbl">Reposições feitas</div></div>
-    <div class="metric teal"><div class="val">${fmtMoney(totalRec)}</div><div class="lbl">Total que você recebeu</div></div>
+    <div class="metric teal"><div class="val">${fmtMoney(totalRec)}</div><div class="lbl">Receita total</div></div>
+    <div class="metric blue"><div class="val">${fmtMoney(totalRecebido)}</div><div class="lbl">Já recebido</div></div>
     ${saldo>0?`<div class="metric coral"><div class="val">${fmtMoney(saldo)}</div><div class="lbl">Saldo em aberto</div></div>`:''}
   `;
   const st={brigadeiro:0,ninho:0,ninhoNutella:0};
@@ -3057,7 +3061,9 @@ function renderRelatorios(){
   const totalVend = filtradas.reduce((s,v)=>s+totalVendidosVisita(v),0);
 
   const rangeRel = getPeriodRange(relPeriod, 'rel');
-  const receita    = filtradas.reduce((s,v)=>s+(+v.recebido||0),0);
+  const receita    = filtradas.reduce((s,v)=>s+(+v.valor||0),0);
+  const recebido   = filtradas.reduce((s,v)=>s+(+v.recebido||0),0);
+  const aReceber   = Math.max(0,receita-recebido);
   const custoTotal = filtradas.reduce((s,v)=>s+custoVisita(v),0);
   const lucro      = receita - custoTotal;
   const margem     = receita > 0 ? Math.round((lucro/receita)*100) : 0;
@@ -3069,7 +3075,9 @@ function renderRelatorios(){
 
   document.getElementById('rel-metrics').innerHTML = `
     <div class="metric teal"><div class="val">${totalVend}</div><div class="lbl">Brownies abastecidos</div></div>
-    <div class="metric teal"><div class="val">${fmtMoney(receita)}</div><div class="lbl">Receita recebida</div></div>
+    <div class="metric teal"><div class="val">${fmtMoney(receita)}</div><div class="lbl">Receita cobrada</div></div>
+    <div class="metric blue"><div class="val">${fmtMoney(recebido)}</div><div class="lbl">Já recebido</div></div>
+    ${aReceber>0?`<div class="metric amber"><div class="val">${fmtMoney(aReceber)}</div><div class="lbl">A receber</div></div>`:``}
     ${comCusto?`<div class="metric coral"><div class="val">${fmtMoney(custoTotal)}</div><div class="lbl">Custo total</div></div>`:''}
     ${comCusto?`<div class="metric amber"><div class="val">${fmtMoney(lucro)}</div><div class="lbl">Lucro estimado</div></div>`:''}
     ${comCusto?`<div class="metric blue"><div class="val">${margem}%</div><div class="lbl">Margem</div></div>`:''}
@@ -3085,7 +3093,7 @@ function renderRelatorios(){
     const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
     const nomeM = d.toLocaleDateString('pt-BR',{month:'short'}).replace('.','');
     const vends = visitas.filter(v=>v.data&&v.data.startsWith(key)).reduce((s,v)=>s+totalVendidosVisita(v),0);
-    const rec   = visitas.filter(v=>v.data&&v.data.startsWith(key)).reduce((s,v)=>s+(+v.recebido||0),0);
+    const rec   = visitas.filter(v=>v.data&&v.data.startsWith(key)).reduce((s,v)=>s+(+v.valor||0),0);
     meses6.push({label:nomeM, key, vends, rec});
   }
   drawBarChart('chart-mensal', meses6.map(m=>m.label), [{label:'Abastecidos', data:meses6.map(m=>m.vends), color:'#b87316'}]);
@@ -3100,14 +3108,14 @@ function renderRelatorios(){
   if(finLabel) finLabel.textContent = comCusto ? '' : '(preencha os custos acima)';
   if(comCusto){
     const dsFin = [
-      {label:'Receita', data:meses6.map(m=>m.rec), color:'#0d6e52'},
+      {label:'Receita', data:meses6.map(m=>{ return visitas.filter(v=>v.data&&v.data.startsWith(m.key)).reduce((s,v)=>s+(+v.valor||0),0); }), color:'#0d6e52'},
       {label:'Custo', data:meses6.map(m=>{
         const vMes=visitas.filter(v=>v.data&&v.data.startsWith(m.key));
         return vMes.reduce((s,v)=>s+custoVisita(v),0);
       }), color:'#9a3b1c'},
       {label:'Lucro', data:meses6.map(m=>{
         const vMes=visitas.filter(v=>v.data&&v.data.startsWith(m.key));
-        const r=vMes.reduce((s,v)=>s+(+v.recebido||0),0);
+        const r=vMes.reduce((s,v)=>s+(+v.valor||0),0);
         const c=vMes.reduce((s,v)=>s+custoVisita(v),0);
         return Math.max(0,r-c);
       }), color:'#1856a0'},
@@ -3132,7 +3140,7 @@ function renderRelatorios(){
   const rankData = clientes.map(c=>{
     const cv = filterByPeriod(visitas.filter(v=>v.clienteId===c.id), relPeriod, 'rel');
     return {c, vendidos:cv.reduce((s,v)=>s+totalVendidosVisita(v),0), recebido:cv.reduce((s,v)=>s+(+v.recebido||0),0)};
-  }).filter(x=>x.vendidos>0||x.recebido>0).sort((a,b)=>b.recebido-a.recebido).slice(0,8);
+  }).filter(x=>x.vendidos>0||x.cobrado>0).sort((a,b)=>b.cobrado-a.cobrado).slice(0,8);
   const medals=['🥇','🥈','🥉'];
   const rankEl = document.getElementById('rel-ranking');
   rankEl.innerHTML = rankData.length===0
@@ -3147,7 +3155,7 @@ function renderRelatorios(){
         </div>
         <div style="text-align:right;flex-shrink:0">
           <div style="font-size:13px;font-weight:600;color:var(--amber)">${x.vendidos} abast.</div>
-          <div style="font-size:11px;color:var(--text3)">${fmtMoney(x.recebido)}</div>
+          <div style="font-size:11px;color:var(--text3)">${fmtMoney(x.cobrado)}</div>
         </div>
       </div>`).join('');
 
@@ -3158,7 +3166,8 @@ function renderRelatorios(){
   const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
   const visitasMes = visitas.filter(v=>v.data&&v.data.startsWith(mesAtual));
   const vendMes  = visitasMes.reduce((s,v)=>s+totalVendidosVisita(v),0);
-  const recMes   = visitasMes.reduce((s,v)=>s+(+v.recebido||0),0);
+  const recMes   = visitasMes.reduce((s,v)=>s+(+v.valor||0),0);
+  const recebidoMes = visitasMes.reduce((s,v)=>s+(+v.recebido||0),0);
   const custoMes = visitasMes.reduce((s,v)=>s+custoVisita(v),0);
   const ritmoVend  = diaAtual>0 ? vendMes/diaAtual : 0;
   const ritmoRec   = diaAtual>0 ? recMes/diaAtual  : 0;
@@ -3181,7 +3190,8 @@ function renderRelatorios(){
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:.85rem">
       <div class="visit-stat"><div class="n" style="color:var(--amber)">${vendMes}</div><div class="l">abastecidos até hoje</div></div>
-      <div class="visit-stat"><div class="n" style="color:var(--teal);font-size:14px">${fmtMoney(recMes)}</div><div class="l">recebido até hoje</div></div>
+      <div class="visit-stat"><div class="n" style="color:var(--teal);font-size:14px">${fmtMoney(recMes)}</div><div class="l">cobrado até hoje</div></div>
+      <div class="visit-stat"><div class="n" style="color:var(--blue);font-size:14px">${fmtMoney(recebidoMes)}</div><div class="l">recebido até hoje</div></div>
       <div class="visit-stat"><div class="n" style="color:var(--blue)">${projVend}</div><div class="l">projeção abastecidos</div></div>
       <div class="visit-stat"><div class="n" style="color:var(--teal);font-size:14px">${fmtMoney(projRec)}</div><div class="l">projeção receita</div></div>
       ${projLucro!==null?`<div class="visit-stat" style="grid-column:1/-1"><div class="n" style="color:var(--amber);font-size:14px">${fmtMoney(projLucro)}</div><div class="l">projeção de lucro</div></div>`:''}
@@ -3210,7 +3220,8 @@ function renderComparativo(el){
   function stats(vs){
     const vendidos  = vs.reduce((s,v)=>s+totalVendidosVisita(v),0);
     const repostos  = vs.reduce((s,v)=>s+(+v.repostos||0),0);
-    const recebido  = vs.reduce((s,v)=>s+(+v.recebido||0),0);
+    const recebido  = vs.reduce((s,v)=>s+(+v.valor||0),0);
+    const recebidoReal = vs.reduce((s,v)=>s+(+v.recebido||0),0);
     const cobrado   = vs.reduce((s,v)=>s+(+v.valor||0),0);
     const saldo     = Math.max(0,cobrado-recebido);
     const ticket    = vs.length>0&&recebido>0 ? recebido/vs.length : 0;
@@ -3271,8 +3282,8 @@ function renderComparativo(el){
     ${row('Visitas realizadas', sa.nVisitas, sp.nVisitas)}
     ${row('Clientes visitados', sa.nClientes, sp.nClientes)}
     ${row('Abastecidos',  sa.repostos,  sp.repostos)}
-    ${row('Total cobrado',      sa.cobrado,   sp.cobrado,   fmtMoney)}
-    ${row('Total recebido',     sa.recebido,  sp.recebido,  fmtMoney)}
+    ${row('Receita (cobrado)',  sa.cobrado,   sp.cobrado,   fmtMoney)}
+    ${row('Já recebido',       sa.recebidoReal,  sp.recebidoReal,  fmtMoney)}
     ${row('Saldo em aberto',    sa.saldo,     sp.saldo,     fmtMoney)}
     ${row('Ticket médio/visita',sa.ticket,    sp.ticket,    fmtMoney)}
 
@@ -3509,8 +3520,8 @@ function renderAnalise(){
   const visitasSemana = visitas.filter(v=>v.data>=sw&&v.data<=se&&v.clienteId!==AVULSA_ID);
   const semanaRepostos = visitasSemana.reduce((s,v)=>s+(+v.repostos||0),0);
   const semanaVendidos = semanaRepostos;
-  const semanaRecebido = visitasSemana.reduce((s,v)=>s+(+v.recebido||0),0);
   const semanaCobrado  = visitasSemana.reduce((s,v)=>s+(+v.valor||0),0);
+  const semanaRecebido = visitasSemana.reduce((s,v)=>s+(+v.recebido||0),0);
   const semanaSaldo    = Math.max(0,semanaCobrado-semanaRecebido);
   const clientesVisitados = [...new Set(visitasSemana.map(v=>v.clienteId))];
   const clientesPendentes = ativos.filter(c=>!clientesVisitados.includes(c.id));
@@ -3519,7 +3530,8 @@ function renderAnalise(){
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:1rem">
       <div class="metric blue" style="padding:.85rem"><div class="val" style="font-size:20px">${visitasSemana.length}</div><div class="lbl">visitas feitas</div></div>
       <div class="metric amber" style="padding:.85rem"><div class="val" style="font-size:20px">${semanaRepostos}</div><div class="lbl">abastecidos</div></div>
-      <div class="metric teal" style="padding:.85rem"><div class="val" style="font-size:18px">${fmtMoney(semanaRecebido)}</div><div class="lbl">recebido</div></div>
+      <div class="metric teal" style="padding:.85rem"><div class="val" style="font-size:18px">${fmtMoney(semanaCobrado)}</div><div class="lbl">receita</div></div>
+      <div class="metric blue" style="padding:.85rem"><div class="val" style="font-size:18px">${fmtMoney(semanaRecebido)}</div><div class="lbl">já recebido</div></div>
       ${semanaSaldo>0?`<div class="metric coral" style="padding:.85rem"><div class="val" style="font-size:18px">${fmtMoney(semanaSaldo)}</div><div class="lbl">saldo em aberto</div></div>`:''}
     </div>
 
