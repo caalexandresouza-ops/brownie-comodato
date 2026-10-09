@@ -234,6 +234,7 @@ input[readonly]{background:var(--surface2);opacity:.8}
       <div class="page-title">Painel geral</div>
       <div class="period-tabs">
         <button class="ptab active" onclick="setPeriod('semana',this)">Esta semana</button>
+        <button class="ptab" onclick="setPeriod('semana_passada',this)">Semana passada</button>
         <button class="ptab" onclick="setPeriod('mes',this)">Este mês</button>
         <button class="ptab" onclick="setPeriod('mes_passado',this)">Mês passado</button>
         <button class="ptab" onclick="setPeriod('ano',this)">Este ano</button>
@@ -1159,6 +1160,10 @@ function getWeekEnd(){
 function getPeriodRange(p, prefix='dash'){
   const now=new Date(),y=now.getFullYear(),m=now.getMonth();
   if(p==='semana') return {from:getWeekStart(),to:getWeekEnd()};
+  if(p==='semana_passada'){
+    const r=semanaRange(-1);
+    return {from:r.from,to:r.to};
+  }
   if(p==='mes')    return {from:`${y}-${String(m+1).padStart(2,'0')}-01`,to:`${y}-${String(m+1).padStart(2,'0')}-${String(new Date(y,m+1,0).getDate()).padStart(2,'0')}`};
   if(p==='mes_passado'){
     const pm=m===0?11:m-1,py=m===0?y-1:y,ld=new Date(y,m,0).getDate();
@@ -1178,7 +1183,7 @@ function filterByPeriod(list,p,prefix='dash'){
   const r=getPeriodRange(p,prefix); if(!r)return list;
   return list.filter(v=>v.data&&v.data>=r.from&&v.data<=r.to);
 }
-const periodLabels={semana:'esta semana',mes:'este mês',mes_passado:'mês passado',ano:'este ano',todos:'todos',custom:'período personalizado'};
+const periodLabels={semana:'esta semana',semana_passada:'semana passada',mes:'este mês',mes_passado:'mês passado',ano:'este ano',todos:'todos',custom:'período personalizado'};
 function setPeriod(p,btn){
   dashPeriod=p;
   document.querySelectorAll('#page-dashboard .ptab').forEach(b=>b.classList.remove('active'));
